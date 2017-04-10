@@ -95,18 +95,21 @@ var YieldbotAdapter = function YieldbotAdapter() {
 
           yieldbot.pub(psn);
           yieldbot.defineSlot(slot, { sizes: bid.sizes || [] });
-
+          if (ybotlib.definedSlots.length > 0) {
+            ybotlib.definedSlots = [];
+          }
           ybotlib.definedSlots.push(bid.bidId);
         });
-
         yieldbot.enableAsync();
-        yieldbot.go();
+        if (yieldbot._initialized !== true) {
+          yieldbot.go();
+        } else {
+          yieldbot.nextPageview();
+        }
       });
-
       ybotq.push(function () {
         ybotlib.handleUpdateState();
       });
-
       adloader.loadScript('//cdn.yldbt.com/js/yieldbot.intent.js', null, true);
     },
     /**
@@ -117,7 +120,6 @@ var YieldbotAdapter = function YieldbotAdapter() {
      */
     handleUpdateState: function () {
       var yieldbot = window.yieldbot;
-
       utils._each(ybotlib.definedSlots, function (v) {
         var slot;
         var criteria;
