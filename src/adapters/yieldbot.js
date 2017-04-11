@@ -88,6 +88,7 @@ var YieldbotAdapter = function YieldbotAdapter() {
       ybotq.push(function () {
         var yieldbot = window.yieldbot;
 
+        ybotlib.definedSlots = [];
         utils._each(bids, function (v) {
           var bid = v;
           var psn = bid.params && bid.params.psn || 'ERROR_DEFINE_YB_PSN';
@@ -95,9 +96,6 @@ var YieldbotAdapter = function YieldbotAdapter() {
 
           yieldbot.pub(psn);
           yieldbot.defineSlot(slot, { sizes: bid.sizes || [] });
-          if (ybotlib.definedSlots.length > 0) {
-            ybotlib.definedSlots = [];
-          }
           ybotlib.definedSlots.push(bid.bidId);
         });
         yieldbot.enableAsync();
@@ -129,7 +127,7 @@ var YieldbotAdapter = function YieldbotAdapter() {
         adapterConfig = $$PREBID_GLOBAL$$._bidsRequested
             .find(bidderRequest => bidderRequest.bidderCode === 'yieldbot').bids
               .find(bid => bid.bidId === v) || {};
-        slot = adapterConfig.params.slot || '';
+        slot = adapterConfig && adapterConfig.params && adapterConfig.params.slot ? adapterConfig.params.slot : '';
         criteria = yieldbot.getSlotCriteria(slot);
 
         placementCode = adapterConfig.placementCode || 'ERROR_YB_NO_PLACEMENT';
