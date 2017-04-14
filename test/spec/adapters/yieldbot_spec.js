@@ -8,7 +8,6 @@ describe('yieldbot adapter tests', () => {
     var adLoader = require('src/adloader');
     var bidmanager = require('src/bidmanager');
 
-    // FYI: querystringify will perform encoding/decoding
     var querystringify = require('querystringify');
 
     window.pbjs = window.pbjs || {};
@@ -27,16 +26,6 @@ describe('yieldbot adapter tests', () => {
 
 
    describe('creation of bid url', function () {
-
-       if (typeof(pbjs._bidsReceived)==="undefined"){
-           pbjs._bidsReceived = [];
-       }
-       if (typeof(pbjs._bidsRequested)==="undefined"){
-           pbjs._bidsRequested = [];
-       }
-       if (typeof(pbjs._adsReceived)==="undefined"){
-           pbjs._adsReceived = [];
-       }
 
         it('should be called only once', function () {
 
@@ -72,7 +61,7 @@ describe('yieldbot adapter tests', () => {
 
         });
 
-        it('should fix parameter name', function () {
+        it('should show the parameters expected', function () {
 
             var params = {
                 bidderCode: 'yieldbot',
@@ -104,7 +93,6 @@ describe('yieldbot adapter tests', () => {
             expect(parsedBidUrlQueryString).to.have.property('e').and.to.equal('yb');
             expect(parsedBidUrlQueryString).to.have.property('t');
 
-            //var bidObj = JSON.parse(parsedBidUrlQueryString.bids);
             console.log('find out:', parsedBidUrlQueryString);
              var bidObj = JSON.parse(parsedBidUrlQueryString.t);
 
@@ -120,8 +108,74 @@ describe('yieldbot adapter tests', () => {
         });
 
    });
+   describe('Placing the bids by their parameters', function () {
 
-   });
+    it('should call the parameters expected for two bids', function () {
+
+            var params = {
+                bidderCode: 'yieldbot',
+                bidder: 'yieldbot',
+                bidderRequestId: '187a340cb9ccc5',
+                bids: [
+                        {
+                            bidId: '2640ad280208cc',
+                            sizes: [[300, 250], [300, 600]],
+                            bidder: 'yieldbot',
+                            bidderRequestId: '187a340cb9ccc5',
+                            params: { psn: '1234', slot: 'medrec' },
+                            requestId: '5f297a1f-3163-46c2-854f-b55fd2e74ece',
+                            placementCode: 'div-gpt-ad-1460505748561-0'
+                            },
+                            {
+                            bidId: '35751f10be5b6b',
+                            sizes: [[728, 90], [970, 90]],
+                            bidder: 'yieldbot',
+                            bidderRequestId: '187a340cb9ccc5',
+                            params: { psn: '1234', slot: 'leaderboard' },
+                            requestId: '5f297a1f-3163-46c2-854f-b55fd2e74ece',
+                            placementCode: 'div-gpt-ad-1460505661639-0'
+                        }
+                    ]
+    };
+    
+         adapter().callBids(params);
+         var bidUrl = YldbotLoadScript.getCall(0).args[0];
+
+          sinon.assert.calledWith(YldbotLoadScript, bidUrl);
+
+            var parsedBidUrl = urlParse(bidUrl);
+            var parsedBidUrlQueryString = querystringify.parse(parsedBidUrl.query);
+
+            expect(parsedBidUrl.hostname).to.equal('cdn.yldbt.com');
+            expect(parsedBidUrl.pathname).to.equal('/js/yieldbot.intent.js');
+        
+            expect(parsedBidUrlQueryString).to.have.property('e').and.to.equal('yb');
+            expect(parsedBidUrlQueryString).to.have.property('t');
+
+            console.log('check2:', parsedBidUrlQueryString);
+             var bidObj = JSON.parse(parsedBidUrlQueryString.t);
+
+            expect(bidObj).to.have.property('bids');
+            var bidObj1 = bidObj.bids[0];
+
+            expect(bidObj1.params).to.have.property('psn').and.to.equal('1234');
+            expect(bidObj1.params).to.have.property('slot').and.to.equal('medrec');
+            expect(bidObj1).to.have.property('bidder').and.to.equal('yieldbot');
+            expect(bidObj1).to.have.property('bidId').and.to.equal('2640ad280208cc');
+            expect(bidObj1).to.have.property('placementCode').and.to.equal('div-gpt-ad-1460505748561-0');
+
+            var bidObj2 = bidObj.bids[1];
+
+            expect(bidObj2).to.have.property('sizes').and.to.equal[[728, 90], [970, 90]];
+            expect(bidObj2.params).to.have.property('slot').and.to.equal('leaderboard');
+            expect(bidObj2.params).to.have.property('psn').and.to.equal('1234');
+            expect(bidObj2).to.have.property('placementCode').and.to.equal('div-gpt-ad-1460505661639-0');
+      });
+
+  });
+
+});
+
 
   // Working on the below tests
 
