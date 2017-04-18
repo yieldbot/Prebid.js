@@ -169,12 +169,48 @@ describe('Yieldbot adapter tests', function() {
       restoreYieldbotMockLib();
     });
 
-    it('should use yieldbot.nextPageview after first callBids ', function() {
+    it('should use yieldbot.nextPageview after first callBids', function() {
       const adapter = new YieldbotAdapter();
       adapter.callBids(bidderRequest);
       mockYieldbotInitBidRequest();
 
       expect(window.yieldbot._initialized).to.equal(true);
+
+      adapter.callBids(bidderRequest);
+      mockYieldbotInitBidRequest();
+      sinon.assert.calledOnce(yieldbotLibStub.nextPageview);
+    });
+
+    it('should not throw on callBids without bidsRequested', function() {
+      const adapter = new YieldbotAdapter();
+      adapter.callBids(bidderRequest);
+      mockYieldbotInitBidRequest();
+
+      expect(window.yieldbot._initialized).to.equal(true);
+
+      window.pbjs._bidsRequested = window.pbjs._bidsRequested.filter(o => {
+        return o.bidderCode !== 'yieldbot';
+      });
+
+      adapter.callBids(bidderRequest);
+      mockYieldbotInitBidRequest();
+      sinon.assert.calledOnce(yieldbotLibStub.nextPageview);
+    });
+
+    it('should not add empty bidResponse on callBids without bidsRequested', function() {
+      window.pbjs._bidsRequested = window.pbjs._bidsRequested.filter(o => {
+        return o.bidderCode !== 'yieldbot';
+      });
+
+      const adapter = new YieldbotAdapter();
+      adapter.callBids(bidderRequest);
+      mockYieldbotInitBidRequest();
+
+      let bidResponses = window.pbjs._bidsReceived.filter(o => {
+        return o.bidderCode === 'yieldbot';
+      });
+
+      expect(bidResponses.length).to.equal(0);
 
       adapter.callBids(bidderRequest);
       mockYieldbotInitBidRequest();
