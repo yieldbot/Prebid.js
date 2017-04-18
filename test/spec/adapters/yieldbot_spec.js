@@ -4,11 +4,6 @@ import YieldbotAdapter from '../../../src/adapters/yieldbot';
 import bidManager from '../../../src/bidmanager';
 import adLoader from '../../../src/adloader';
 
-let adapter;
-let sandbox;
-let yieldbotLibStub;
-let YldbotLoadScript;
-
 const bidderRequest = {
   bidderCode: 'yieldbot',
   bidder: 'yieldbot',
@@ -18,19 +13,19 @@ const bidderRequest = {
       bidId: '2640ad280208cc',
       sizes: [[300, 250], [300, 600]],
       bidder: 'yieldbot',
-      bidderRequestId: '187a340cb9ccc5',
+      bidderRequestId: '187a340cb9ccc0',
       params: { psn: '1234', slot: 'medrec' },
       requestId: '5f297a1f-3163-46c2-854f-b55fd2e74ece',
-      placementCode: 'div-gpt-ad-1460505748561-0'
+      placementCode: '/4294967296/adunit0'
     },
     {
       bidId: '35751f10be5b6b',
       sizes: [[728, 90], [970, 90]],
       bidder: 'yieldbot',
-      bidderRequestId: '187a340cb9ccc5',
+      bidderRequestId: '187a340cb9ccc1',
       params: { psn: '1234', slot: 'leaderboard' },
       requestId: '5f297a1f-3163-46c2-854f-b55fd2e74ece',
-      placementCode: 'div-gpt-ad-1460505661639-0'
+      placementCode: '/4294967296/adunit1'
     }
   ]
 };
@@ -43,10 +38,7 @@ const YB_BID_FIXTURE = {
     ybot_size: '300x250'
   },
   leaderboard: {
-    ybot_ad: 'y',
-    ybot_slot: 'leaderboard',
-    ybot_cpm: '100',
-    ybot_size: '728x90'
+    ybot_ad: 'n'
   }
 };
 
@@ -59,8 +51,6 @@ function createYieldbotMockLib() {
     enableAsync: () => {},
     go: () => { window.yieldbot._initialized = true; },
     nextPageview: (slots, callback) => {},
-    updateState: (data) => {
-    },
     getSlotCriteria: (slotName) => {
       return YB_BID_FIXTURE[slotName] || {ybot_ad: "n"};
     }
@@ -71,7 +61,7 @@ function restoreYieldbotMockLib() {
   window.yieldbot = null;
 }
 
-function mockLoadAndBidRequest() {
+function mockYieldbotInitBidRequest() {
   window.ybotq = window.ybotq || [];
   window.ybotq.forEach(fn => {
     fn.apply(window.yieldbot);
@@ -79,65 +69,89 @@ function mockLoadAndBidRequest() {
   window.ybotq = [];
 }
 
+let adapter;
+let sandbox;
+let bidManagerStub;
+let yieldbotLibStub;
+
 before(function() {
   pbjs._bidsRequested.push(bidderRequest);
 });
 
 describe('Yieldbot adapter tests', function() {
 
-  beforeEach(function() {
-    adapter = new YieldbotAdapter();
-    sandbox = sinon.sandbox.create();
-  });
-
-  afterEach(function() {
-    sandbox.restore();
-  });
-
-  let yieldbotStub;
   describe('callBids', function() {
     beforeEach(function () {
+      adapter = new YieldbotAdapter();
+      sandbox = sinon.sandbox.create();
+
       createYieldbotMockLib();
+
       sandbox.stub(adLoader, 'loadScript');
-      yieldbotStub = sandbox.stub(window.yieldbot);
+      yieldbotLibStub = sandbox.stub(window.yieldbot);
+      yieldbotLibStub.getSlotCriteria.restore();
+
+      bidManagerStub = sandbox.stub(bidManager, 'addBidResponse');
+      mockYieldbotInitBidRequest();
     });
 
     afterEach(() => {
+      sandbox.restore();
       restoreYieldbotMockLib();
     });
 
     it('should request the yieldbot library', function() {
       adapter.callBids(bidderRequest);
-      mockLoadAndBidRequest();
       sinon.assert.calledOnce(adLoader.loadScript);
       sinon.assert.calledWith(adLoader.loadScript, '//cdn.yldbt.com/js/yieldbot.intent.js');
     });
 
     it('should set a yieldbot psn', function() {
       adapter.callBids(bidderRequest);
-      mockLoadAndBidRequest();
-      sinon.assert.called(yieldbotStub.pub);
-      sinon.assert.calledWith(yieldbotStub.pub, '1234');
+      sinon.assert.called(yieldbotLibStub.pub);
+      sinon.assert.calledWith(yieldbotLibStub.pub, '1234');
     });
 
     it('should define yieldbot slots', function() {
       adapter.callBids(bidderRequest);
-      mockLoadAndBidRequest();
-      sinon.assert.calledTwice(yieldbotStub.defineSlot);
-      sinon.assert.calledWith(yieldbotStub.defineSlot, 'medrec', {sizes: [[300, 250], [300, 600]]});
-      sinon.assert.calledWith(yieldbotStub.defineSlot, 'leaderboard', {sizes: [[728, 90], [970, 90]]});
+      sinon.assert.calledTwice(yieldbotLibStub.defineSlot);
+      sinon.assert.calledWith(yieldbotLibStub.defineSlot, 'medrec', {sizes: [[300, 250], [300, 600]]});
+      sinon.assert.calledWith(yieldbotLibStub.defineSlot, 'leaderboard', {sizes: [[728, 90], [970, 90]]});
     });
 
     it('should enable yieldbot async mode', function() {
       adapter.callBids(bidderRequest);
-      mockLoadAndBidRequest();
-      sinon.assert.called(yieldbotStub.enableAsync);
+      sinon.assert.called(yieldbotLibStub.enableAsync);
     });
 
-    it('should handle yieldbot updateState callback', function() {
+    it('should add bid response after yieldbot request callback', function() {
       adapter.callBids(bidderRequest);
-      mockLoadAndBidRequest();
-      sinon.assert.calledOnce(yieldbotStub.updateState);
+
+      const plc1 = bidManagerStub.firstCall.args[0];
+      expect(plc1).to.equal(bidderRequest.bids[0].placementCode);
+
+      const pb_bid1 = bidManagerStub.firstCall.args[1];
+      expect(pb_bid1.bidderCode).to.equal('yieldbot');
+      expect(pb_bid1.cpm).to.equal(2);
+      expect(pb_bid1.ybot_ad).to.equal('y');
+      expect(pb_bid1.ybot_slot).to.equal('medrec');
+      expect(pb_bid1.ybot_cpm).to.equal('200');
+      expect(pb_bid1.ybot_size).to.equal('300x250');
+
+      expect(pb_bid1.width).to.equal('300');
+      expect(pb_bid1.height).to.equal('250');
+      expect(pb_bid1.ad).to.match(/src="\/\/cdn\.yldbt\.com\/js\/yieldbot\.intent\.js/);
+      expect(pb_bid1.ad).to.match(/yieldbot\.renderAd\('medrec:300x250'\)/);
+
+      const plc2 = bidManagerStub.secondCall.args[0];
+      expect(plc2).to.equal(bidderRequest.bids[1].placementCode);
+
+      const pb_bid2 = bidManagerStub.secondCall.args[1];
+      expect(pb_bid2.bidderCode).to.equal('yieldbot');
+      expect(pb_bid2.width).to.equal(0);
+      expect(pb_bid2.height).to.equal(0);
+      expect(pb_bid2.statusMessage).to.match(/empty.*response/);
+
     });
   });
 });
