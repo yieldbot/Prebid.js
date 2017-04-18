@@ -1,8 +1,7 @@
 import {expect} from 'chai';
-import {assert} from 'chai';
-import YieldbotAdapter from '../../../src/adapters/yieldbot';
-import bidManager from '../../../src/bidmanager';
-import adLoader from '../../../src/adloader';
+import YieldbotAdapter from 'src/adapters/yieldbot';
+import bidManager from 'src/bidmanager';
+import adLoader from 'src/adloader';
 
 const bidderRequest = {
   bidderCode: 'yieldbot',
@@ -42,7 +41,6 @@ const YB_BID_FIXTURE = {
   }
 };
 
-
 function createYieldbotMockLib() {
   window.yieldbot = {
     _initialized: false,
@@ -69,7 +67,6 @@ function mockYieldbotInitBidRequest() {
   window.ybotq = [];
 }
 
-let adapter;
 let sandbox;
 let bidManagerStub;
 let yieldbotLibStub;
@@ -82,7 +79,7 @@ describe('Yieldbot adapter tests', function() {
 
   describe('callBids', function() {
     beforeEach(function () {
-      adapter = new YieldbotAdapter();
+
       sandbox = sinon.sandbox.create();
 
       createYieldbotMockLib();
@@ -92,41 +89,38 @@ describe('Yieldbot adapter tests', function() {
       yieldbotLibStub.getSlotCriteria.restore();
 
       bidManagerStub = sandbox.stub(bidManager, 'addBidResponse');
+
+      const adapter = new YieldbotAdapter();
+      adapter.callBids(bidderRequest);
       mockYieldbotInitBidRequest();
     });
 
-    afterEach(() => {
+    afterEach(function() {
       sandbox.restore();
       restoreYieldbotMockLib();
     });
 
     it('should request the yieldbot library', function() {
-      adapter.callBids(bidderRequest);
       sinon.assert.calledOnce(adLoader.loadScript);
       sinon.assert.calledWith(adLoader.loadScript, '//cdn.yldbt.com/js/yieldbot.intent.js');
     });
 
     it('should set a yieldbot psn', function() {
-      adapter.callBids(bidderRequest);
       sinon.assert.called(yieldbotLibStub.pub);
       sinon.assert.calledWith(yieldbotLibStub.pub, '1234');
     });
 
     it('should define yieldbot slots', function() {
-      adapter.callBids(bidderRequest);
       sinon.assert.calledTwice(yieldbotLibStub.defineSlot);
       sinon.assert.calledWith(yieldbotLibStub.defineSlot, 'medrec', {sizes: [[300, 250], [300, 600]]});
       sinon.assert.calledWith(yieldbotLibStub.defineSlot, 'leaderboard', {sizes: [[728, 90], [970, 90]]});
     });
 
     it('should enable yieldbot async mode', function() {
-      adapter.callBids(bidderRequest);
       sinon.assert.called(yieldbotLibStub.enableAsync);
     });
 
     it('should add bid response after yieldbot request callback', function() {
-      adapter.callBids(bidderRequest);
-
       const plc1 = bidManagerStub.firstCall.args[0];
       expect(plc1).to.equal(bidderRequest.bids[0].placementCode);
 
@@ -151,7 +145,38 @@ describe('Yieldbot adapter tests', function() {
       expect(pb_bid2.width).to.equal(0);
       expect(pb_bid2.height).to.equal(0);
       expect(pb_bid2.statusMessage).to.match(/empty.*response/);
+    });
+  });
 
+  describe('callBids, refresh', function() {
+    beforeEach(function () {
+      if (sandbox) { sandbox.restore(); }
+      sandbox = sinon.sandbox.create();
+
+      createYieldbotMockLib();
+
+      sandbox.stub(adLoader, 'loadScript');
+      yieldbotLibStub = sandbox.stub(window.yieldbot);
+      yieldbotLibStub.getSlotCriteria.restore();
+      yieldbotLibStub.go.restore();
+      bidManagerStub = sandbox.stub(bidManager, 'addBidResponse');
+    });
+
+    afterEach(function() {
+      sandbox.restore();
+      restoreYieldbotMockLib();
+    });
+
+    it('should use yieldbot.nextPageview after first callBids ', function() {
+      const adapter = new YieldbotAdapter();
+      adapter.callBids(bidderRequest);
+      mockYieldbotInitBidRequest();
+
+      expect(window.yieldbot._initialized).to.equal(true);
+
+      adapter.callBids(bidderRequest);
+      mockYieldbotInitBidRequest();
+      sinon.assert.calledOnce(yieldbotLibStub.nextPageview);
     });
   });
 });
