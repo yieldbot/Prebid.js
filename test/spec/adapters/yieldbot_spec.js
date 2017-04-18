@@ -42,6 +42,7 @@ const YB_BID_FIXTURE = {
 };
 
 function createYieldbotMockLib() {
+  // jshint unused:false
   window.yieldbot = {
     _initialized: false,
     pub: (psn) => {},
@@ -53,6 +54,7 @@ function createYieldbotMockLib() {
       return YB_BID_FIXTURE[slotName] || {ybot_ad: "n"};
     }
   };
+  // jshint unused:true
 }
 
 function restoreYieldbotMockLib() {
@@ -72,7 +74,7 @@ let bidManagerStub;
 let yieldbotLibStub;
 
 before(function() {
-  pbjs._bidsRequested.push(bidderRequest);
+  window.pbjs._bidsRequested.push(bidderRequest);
 });
 
 describe('Yieldbot adapter tests', function() {
