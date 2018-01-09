@@ -1,0 +1,175 @@
+<html>
+    <head>
+        <script>
+         var googletag = googletag || {};
+         googletag.cmd = googletag.cmd || [];
+
+         var pbjs = pbjs || {};
+         pbjs.que = pbjs.que  || [];
+         var PREBID_TIMEOUT = 3000;
+
+         pbjs.useSecureLoad = true;
+
+         var date = new Date().getTime();
+
+         function initAdserver() {
+             if (!pbjs.initAdserverSet) {
+                 (function () {
+                     var gads = document.createElement('script');
+                     gads.async = true;
+                     gads.type = 'text/javascript';
+                     var useSSL = 'https:' == document.location.protocol;
+                     gads.src = (useSSL ? 'https:' : 'http:') +
+                                '//www.googletagservices.com/tag/js/gpt.js';
+                     var node = document.getElementsByTagName('script')[0];
+                     node.parentNode.insertBefore(gads, node);
+                 })();
+             }
+             pbjs.initAdserverSet = true;
+         };
+
+         // Load GPT when timeout is reached.
+         setTimeout(initAdserver, PREBID_TIMEOUT);
+         pbjs.que.push(function () {
+             var adUnit17 = {
+                 code: '/19968336/header-bid-tag-17',
+                 sizes: [300, 250],
+                 bids: [
+                     {
+                         bidder: 'yieldbot',
+                         params: {
+                             psn: '1234',
+                             slot: 'medrec'
+                         }
+                     },
+                     {
+                         bidder: 'appnexus',
+                         params: {
+                             placementId : '6518787',
+                         }
+                     }
+                 ]
+             };
+
+             var adUnit18 = {
+                 code: '/19968336/header-bid-tag-18',
+                 sizes: [[300,600], [160, 600]],
+                 bids: [
+                     {
+                         bidder: 'yieldbot',
+                         params: {
+                             psn: '1234',
+                             slot: 'medrec'
+                         }
+                     },
+                     {
+                         bidder: 'appnexus',
+                         params: {
+                             placementId : '6518787',
+                         }
+                     }
+                 ]
+             };
+
+             pbjs.addAdUnits([adUnit17, adUnit18]);
+
+             setTimeout(function(){
+                 console.log('requesting bids!');
+                 pbjs.requestBids({
+                     bidsBackHandler: function (bidResponses) {
+                         var bidAvailable = [];
+                         var bidEmptyError = [];
+
+                         Object.keys(bidResponses).forEach(function (key) {
+                             bidResponses[key].bids.forEach(function (bid) {
+                                 if (bid.statusMessage === 'Bid available') {
+                                     bidAvailable.push(bid.bidder);
+                                 }
+                                 if (bid.statusMessage === 'Bid returned empty or error response') {
+                                     bidEmptyError.push(bid.bidder)
+                                 }
+                             });
+                         });
+                         initAdserver();
+                     },
+
+                     timeout : PREBID_TIMEOUT
+                 });
+
+
+             }, 500);
+
+         });
+
+         (function () {
+             var d = document, pbs = d.createElement("script"), pro = d.location.protocal;
+             pbs.type = "text/javascript";
+             pbs.src = '/build/dev/prebid.js';
+             var target = document.getElementsByTagName("head")[0];
+             target.insertBefore(pbs, target.firstChild);
+         })();
+        </script>
+
+        <script>
+         var globalslot = null;
+         googletag.cmd.push(function () {
+             var slot15 = googletag.defineSlot('/19968336/header-bid-tag-17',
+                                               [[300, 250]],
+                                               'div-15')
+                                   .addService(googletag.pubads());
+             var slot16 = googletag.defineSlot('/19968336/header-bid-tag-18',
+                                               [[160, 600], [300, 600]],
+                                               'div-16')
+                                   .addService(googletag.pubads());
+
+             pbjs.que.push(function () {
+                 pbjs.setTargetingForGPTAsync();
+             });
+
+             googletag.pubads().enableSingleRequest();
+             googletag.enableServices();
+
+         });
+
+         function refreshBids() {
+             var currentTime = new Date().getTime();
+             pbjs.que.push(function () {
+                 pbjs.requestBids({
+                     timeout: PREBID_TIMEOUT,
+                     bidsBackHandler: function () {
+                         var now = new Date().getTime();
+                         console.log('TIME for callback ===== ' + (now - currentTime));
+                         callGPT();
+                     },
+                     adUnitCodes: [
+                         headerBidTag0, headerBidTag1
+                     ]
+                 });
+             });
+         }
+
+         function callGPT() {
+             pbjs.setTargetingForGPTAsync();
+             googletag.pubads().refresh();
+         }
+        </script>
+    </head>
+    <body>
+
+        <h2>Prebid.js Test3</h2>
+
+        <div id='div-17'>
+            <script type='text/javascript'>
+             googletag.cmd.push(function() { googletag.display('div-15'); });
+            </script>
+        </div>
+        <div id='div-18'>
+            <script type='text/javascript'>
+             googletag.cmd.push(function() { googletag.display('div-16'); });
+            </script>
+        </div>
+
+        <button onclick="refreshBids()">Refresh Bids</button>
+
+    </body>
+</html>
