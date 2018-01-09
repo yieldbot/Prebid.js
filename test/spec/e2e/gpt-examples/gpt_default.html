@@ -228,8 +228,8 @@
                   {
                     bidder: 'yieldbot',
                     params: {
-                      pub: 'f82d',
-                      name: 'mobile_lb'
+                      psn: 'f82d',
+                      slot: 'mobile_lb'
                   }
                 }
               ]
@@ -248,8 +248,47 @@
               ]
             };
 
-            pbjs.addAdUnits([adUnit2, adUnit1, adUnit16, adUnit14, adUnit13, adUnit12]);
+            var adUnit17 = {
+                code: '/19968336/header-bid-tag-17',
+                sizes: [300, 250],
+                bids: [
+                    {
+                        bidder: 'yieldbot',
+                        params: {
+                            psn: '1234',
+                            slot: 'medrec'
+                        }
+                    },
+                    {
+                        bidder: 'appnexus',
+                        params: {
+                            placementId : '6518787',
+                        }
+                    }
+                ]
+            };
 
+            var adUnit18 = {
+                code: '/19968336/header-bid-tag-18',
+                sizes: [[300,600], [160, 600]],
+                bids: [
+                    {
+                        bidder: 'yieldbot',
+                        params: {
+                            psn: '1234',
+                            slot: 'medrec'
+                        }
+                    },
+                    {
+                        bidder: 'appnexus',
+                        params: {
+                            placementId : '6518787',
+                        }
+                    }
+                ]
+            };
+
+            pbjs.addAdUnits([adUnit2, adUnit1, adUnit16, adUnit14, adUnit13, adUnit12, adUnit17, adUnit18]);
 
             pbjs.bidderSettings =
             {

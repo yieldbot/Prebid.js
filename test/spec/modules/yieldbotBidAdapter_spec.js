@@ -1,0 +1,378 @@
+import { expect } from 'chai';
+import { YieldbotAdapter, spec } from 'modules/yieldbotBidAdapter';
+import { newBidder } from 'src/adapters/bidderFactory';
+import * as utils from 'src/utils';
+
+describe('Yieldbot Adapter Unit Tests', function() {
+
+  describe('Adapter spec API', function() {
+    it('code', () => {
+      expect(spec.code).to.equal('yieldbot');
+    });
+    it('supportedMediaTypes', () => {
+      expect(spec.supportedMediaTypes).to.deep.equal(['banner']);
+    });
+    it('isBidRequestValid', () => {
+      expect(spec.isBidRequestValid).to.be.a('function');
+    });
+    it('buildRequests', () => {
+      expect(spec.buildRequests).to.be.a('function');
+    });
+    it('interpretResponse', () => {
+      expect(spec.interpretResponse).to.be.a('function');
+    });
+  });
+
+  describe('isBidRequestValid', function() {
+    let bid = {
+      bidder: 'yieldbot',
+      'params': {
+        psn: 'foo',
+        slot: 'bar'
+      },
+      sizes: [[300, 250], [300, 600]]
+    };
+
+    it('valid parameters', function() {
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          psn: 'foo',
+          slot: 'bar'
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(true);
+    });
+
+    it('undefined parameters', function() {
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(false);
+
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          psn: 'foo'
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(false);
+
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          slot: 'bar'
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(false);
+    });
+
+    it('falsey string parameters', function() {
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          psn: '',
+          slot: 'bar'
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(false);
+
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          psn: 'foo',
+          slot: ''
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(false);
+
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          psn: 'foo',
+          slot: 0
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(false);
+    });
+
+    it('parameters type invalid', function() {
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          psn: 'foo',
+          slot: 0
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(false);
+
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          psn: { name: 'foo' },
+          slot: 'bar'
+        },
+        sizes: [[300, 250], [300, 600]]
+      })).to.equal(false);
+    });
+
+    it('invalid sizes type', function() {
+      expect(spec.isBidRequestValid({
+        bidder: 'yieldbot',
+        'params': {
+          psn: 'foo',
+          slot: 'bar'
+        },
+        sizes: {}
+      })).to.equal(true);
+    });
+  });
+
+  describe('getUniqueSlotSizes', function() {
+    it('should be empty with falsey sizes', function() {
+      expect(YieldbotAdapter.getUniqueSlotSizes('')).to.deep.equal([]);
+      expect(YieldbotAdapter.getUniqueSlotSizes(0)).to.deep.equal([]);
+    });
+
+    it('should be empty invalid sizes type', function() {
+      expect(YieldbotAdapter.getUniqueSlotSizes(true)).to.deep.equal([]);
+      expect(YieldbotAdapter.getUniqueSlotSizes(function() {})).to.deep.equal([]);
+      expect(YieldbotAdapter.getUniqueSlotSizes(87)).to.deep.equal([]);
+      expect(YieldbotAdapter.getUniqueSlotSizes({})).to.deep.equal([]);
+    });
+
+    it('should be empty with empty sizes', function() {
+      expect(YieldbotAdapter.getUniqueSlotSizes([])).to.deep.equal([]);
+    });
+
+    it('should be empty with numeric sizes', function() {
+      expect(YieldbotAdapter.getUniqueSlotSizes([[300, 250], [300, 250], [300, 600]])).to.deep.equal([]);
+    });
+
+    it('should be empty with array string sizes', function() {
+      expect(YieldbotAdapter.getUniqueSlotSizes(
+        [
+          ['300', '250'],
+          ['300', '250'],
+          ['300', '600']
+        ])).to.deep.equal([]);
+    });
+
+    it('should be empty with string of sizes', function() {
+      expect(YieldbotAdapter.getUniqueSlotSizes('300x250,300x250,300x600'))
+        .to.deep.equal([]);
+    });
+
+    it('should be unique with array of formatted string sizes', function() {
+      expect(YieldbotAdapter.getUniqueSlotSizes(['300x250', '300x250', '300x600']))
+        .to.deep.equal([['300', '250'], ['300', '600']]);
+    });
+  });
+
+  describe('getUniqueSlotSizes with utils.parseSizesInput', function() {
+    it('should be empty with malformed sizes', function() {
+      const sizes = utils.parseSizesInput('300250,300|250,300#600');
+      expect(YieldbotAdapter.getUniqueSlotSizes(sizes))
+        .to.deep.equal([]);
+    });
+
+    it('should be unique with string of sizes', function() {
+      const sizes = utils.parseSizesInput('300x250,300x250,300x600');
+      expect(YieldbotAdapter.getUniqueSlotSizes(sizes))
+        .to.deep.equal([['300', '250'], ['300', '600']]);
+    });
+
+    it('should be empty with array of string sizes', function() {
+      const sizes = utils.parseSizesInput(['300x250', '300x250', '300x600']);
+      expect(YieldbotAdapter.getUniqueSlotSizes(sizes))
+        .to.deep.equal([]);
+    });
+
+    it('should be unique array sizes', function() {
+      const sizes = utils.parseSizesInput(
+        [
+          ['300', '250'],
+          ['300', '250'],
+          ['300', '600']
+        ]);
+      expect(YieldbotAdapter.getUniqueSlotSizes(sizes))
+        .to.deep.equal(
+          [
+            ['300', '250'],
+            ['300', '600']
+          ]);
+    });
+
+    it('should be unique string and array sizes', function() {
+      const sizes = utils.parseSizesInput(
+        [
+          ['300x250'],
+          ['300', '250'],
+          ['300', '250'],
+          ['300', '600'],
+          ['300', '600'],
+          ['728', '90']
+        ]);
+      expect(YieldbotAdapter.getUniqueSlotSizes(sizes))
+        .to.deep.equal(
+          [
+            ['300', '250'],
+            ['300', '600'],
+            ['728', '90']
+          ]);
+    });
+  });
+
+  describe('buildBidRequestParams', function() {
+    it('should build unique slot sizes', function() {
+      const bidRequests = [
+        {
+          'params': {
+            psn: '1234',
+            slot: 'medrec'
+          },
+          sizes: [[300, 250], [300, 600]]
+        },
+        {
+          'params': {
+            psn: '1234',
+            slot: 'medrec'
+          },
+          sizes: [[300, 250], [300, 600]]
+        },
+        {
+          'params': {
+            psn: '1234',
+            slot: 'leaderboard'
+          },
+          sizes: [970, 90]
+        },
+        {
+          'params': {
+            psn: '1234',
+            slot: 'footerboard'
+          },
+          sizes: [728, 90]
+        },
+        {
+          'params': {
+            psn: '1234',
+            slot: 'leaderboard'
+          },
+          sizes: [[728, 90], [970, 90]]
+        },
+        {
+          'params': {
+            psn: '1234',
+            slot: 'medrec'
+          },
+          sizes: [[160, 600], [300, 250], [300, 600]]
+        }
+      ];
+      const params = YieldbotAdapter.buildBidRequestParams(bidRequests);
+      expect(params[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME])
+        .to.equal('medrec|leaderboard|footerboard');
+      expect(params[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE])
+        .to.equal('300x250.300x600.160x600|970x90.728x90|728x90');
+    });
+  });
+
+  describe.only('buildRequests', function() {
+    let server;
+    beforeEach(function() {
+      server = sinon.fakeServer.create();
+    });
+
+    afterEach(function() {
+      server.restore();
+    });
+
+    let bidRequests = [
+      {
+        'bidder': 'appnexus',
+        'params': {
+          'placementId': '10433394'
+        },
+        'adUnitCode': 'adunit-code',
+        'sizes': [[300, 250], [300, 600]],
+        'bidId': '30b31c1838de1e',
+        'bidderRequestId': '22edbae2733bf6',
+        'auctionId': '1d1a030790a475'
+      },
+      {
+        'bidder': 'appnexus',
+        'params': {
+          'plac ementId': '10433394'
+        },
+        'adUnitCode': 'adunit-code2',
+        'sizes': [],
+        'bidId': '30b31c1838de1e',
+        'bidderRequestId': '22edbae2733bf6',
+        'auctionId': '1d1a030790a475'
+      }
+    ];
+
+    it('should do something', function() {
+      server.respondWith(JSON.stringify({ 'frotz': 'mumble'}));
+      spec.buildRequests([], []);
+    });
+  });
+
+  describe.skip('interpretResponse', () => {
+    let response = {
+      'version': '3.0.0',
+      'tags': [
+        {
+          'uuid': '3db3773286ee59',
+          'tag_id': 10433394,
+          'auction_id': '4534722592064951574',
+          'nobid': false,
+          'no_ad_url': 'http://lax1-ib.adnxs.com/no-ad',
+          'timeout_ms': 10000,
+          'ad_profile_id': 27079,
+          'ads': [
+            {
+              'content_source': 'rtb',
+              'ad_type': 'banner',
+              'buyer_member_id': 958,
+              'creative_id': 29681110,
+              'media_type_id': 1,
+              'media_subtype_id': 1,
+              'cpm': 0.5,
+              'cpm_publisher_currency': 0.5,
+              'publisher_currency_code': '$',
+              'client_initiated_ad_counting': true,
+              'rtb': {
+                'banner': {
+                  'content': '<!-- Creative -->',
+                  'width': 300,
+                  'height': 250
+                },
+                'trackers': [
+                  {
+                    'impression_urls': [
+                      'http://lax1-ib.adnxs.com/impression'
+                    ],
+                    'video_events': {}
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    it('should get correct bid response', function() {
+
+    });
+  });
+
+  describe.skip('test stuff', function() {
+    it('some stuff', function() {
+      expect([]).to.deep.equal([]);
+    });
+  });
+});
