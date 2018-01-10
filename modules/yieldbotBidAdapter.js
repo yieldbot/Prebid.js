@@ -228,25 +228,31 @@ export const YieldbotAdapter = {
 
     // const serverBody = serverResponse.body;
     // const headerValue = serverResponse.headers.get('some-response-header')
-    const bidResponses = [];
-    /*
-     const bidResponse = {
-      requestId: bidRequest.bidId,
-      cpm: CPM,
-      width: WIDTH,
-      height: HEIGHT,
-      creativeId: CREATIVE_ID,
-      dealId: DEAL_ID,
-      currency: CURRENCY,
-      netRevenue: true,
-      ttl: TIME_TO_LIVE,
-      referrer: REFERER,
-      ad: CREATIVE_BODY
-    };
-    bidResponses.push(bidResponse);
-     */
+
     console.log('interpretResponse.serverResponse.body:', serverResponse.body);
     console.log('interpretResponse.bidRequest:', bidRequest);
+
+    const bidResponses = [];
+    const slotBids = serverResponse.body && serverResponse.body.slots ? serverResponse.body.slots : [];
+    slotBids.forEach((bid) => {
+      const slot = bid.slot;
+      const size = bid.size;
+      const cpm = bid.cpm;
+
+      const bidResponse = {
+        requestId: bidRequest.bidRequests[0].bidId,
+        cpm: 2,
+        width: 250,
+        height: 300,
+        creativeId: _newId(),
+        currency: 'USD',
+        netRevenue: true,
+        ttl: 180000,
+        ad: '<html><body><b><em>It works...</em></b></body></html>'
+      };
+      bidResponses.push(bidResponse);
+    });
+
     return bidResponses;
   },
 
