@@ -247,8 +247,9 @@ export const YieldbotAdapter = {
         creativeId: _newId(),
         currency: 'USD',
         netRevenue: true,
-        ttl: 180000,
-        ad: '<html><body><b><em>It works...</em></b></body></html>'
+        ttl: 180, // [s]
+        //ad: '<h2>It works...</h2><div style="background: lemonchiffon;"><p>However, HTML needs viewability script and pixel call</p><p>Preference would be to have a GET request in both <code>ad:</code> and <code>adUrl:</code> cases return the <code>&lt;html&gt;</code> element containing all parts of the creative including scripts.</p></div>'
+        adUrl: 'http://localhost:8087/yb-creative.html'
       };
       bidResponses.push(bidResponse);
     });
