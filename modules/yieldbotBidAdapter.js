@@ -94,7 +94,7 @@ export const YieldbotAdapter = {
         IFRAME_TYPE: 'it',
         SESSION_BLOCKED: 'sb',
         BID_TYPE: 'bt',
-        END_REQUEST_PARAMS: 'e'
+        TERMINATOR: 'e'
       },
       COOKIES: {
         SESSION_BLOCKED: 'n',
@@ -304,6 +304,7 @@ export const YieldbotAdapter = {
     params[this.CONSTANTS.REQUEST_PARAMS.LOCATION] = utils.getTopWindowUrl();
     params[this.CONSTANTS.REQUEST_PARAMS.REFERRER] = utils.getTopWindowReferrer();
 
+    params[this.CONSTANTS.REQUEST_PARAMS.TERMINATOR] = '';
     return params;
   },
 

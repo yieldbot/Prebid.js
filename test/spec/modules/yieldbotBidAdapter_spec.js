@@ -1,24 +1,25 @@
 import { expect } from 'chai';
 import { YieldbotAdapter, spec } from 'modules/yieldbotBidAdapter';
 import { newBidder } from 'src/adapters/bidderFactory';
+import AdapterManager from 'src/adaptermanager';
 import * as utils from 'src/utils';
 
 describe('Yieldbot Adapter Unit Tests', function() {
 
   describe('Adapter spec API', function() {
-    it('code', () => {
+    it('code', function() {
       expect(spec.code).to.equal('yieldbot');
     });
-    it('supportedMediaTypes', () => {
+    it('supportedMediaTypes', function() {
       expect(spec.supportedMediaTypes).to.deep.equal(['banner']);
     });
-    it('isBidRequestValid', () => {
+    it('isBidRequestValid', function() {
       expect(spec.isBidRequestValid).to.be.a('function');
     });
-    it('buildRequests', () => {
+    it('buildRequests', function() {
       expect(spec.buildRequests).to.be.a('function');
     });
-    it('interpretResponse', () => {
+    it('interpretResponse', function() {
       expect(spec.interpretResponse).to.be.a('function');
     });
   });
@@ -226,6 +227,44 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('buildBidRequestParams', function() {
+    it.only('should build all parameters', function() {
+      const params = YieldbotAdapter.buildBidRequestParams(
+        [
+          {
+            'params': {
+              psn: '1234',
+              slot: 'medrec'
+            },
+            sizes: [[300, 250], [300, 600]]
+          }
+        ]
+      );
+
+      const expectedParamKeys = [
+        'v',
+        'vi',
+        'si',
+        'pvi',
+        'pvd',
+        'lpvi',
+        'sn',
+        'ssz',
+        'lo',
+        'r',
+        'sd',
+        'to',
+        'la',
+        'np',
+        'ua',
+        'lpv',
+        'cts_ns',
+        'cts_js',
+        'cts_ini',
+        'e'
+      ];
+      expect(Object.keys(params)).to.deep.equal(expectedParamKeys);
+    });
+
     it('should build unique slot sizes', function() {
       const bidRequests = [
         {
@@ -279,14 +318,22 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
-  describe.only('buildRequests', function() {
-    let server;
+  describe('buildRequests', function() {
+    let sandbox, server, xhr, requests;
     beforeEach(function() {
+      sandbox = sinon.sandbox.create();
       server = sinon.fakeServer.create();
+      server.respondImmediately = true;
+
+      xhr = sinon.useFakeXMLHttpRequest();
+      requests= [];
+      xhr.onCreate = function (xhr) {
+        requests.push(xhr);
+      };
     });
 
     afterEach(function() {
-      server.restore();
+      sandbox.restore();
     });
 
     let bidRequests = [
@@ -314,9 +361,78 @@ describe('Yieldbot Adapter Unit Tests', function() {
       }
     ];
 
+    const adUnits = [
+      {
+        code: '/19968336/header-bid-tag-0',
+        sizes: [
+          [
+            300,
+            250
+          ],
+          [
+            300,
+            600
+          ]
+        ],
+        bids: [
+          {
+            bidder: 'yieldbot',
+            params: {
+              psn: '1234',
+              slot: 'medrec'
+            },
+            placementCode: '/19968336/header-bid-tag-0',
+            sizes: [
+              [
+                300,
+                250
+              ],
+              [
+                300,
+                600
+              ]
+            ],
+            bidId: '154f9cbf82df565',
+            bidderRequestId: '1448569c2453b84',
+            auctionId: '1ff753bd4ae5cb'
+          }
+        ]
+      }
+    ];
+
     it('should do something', function() {
-      server.respondWith(JSON.stringify({ 'frotz': 'mumble'}));
-      spec.buildRequests([], []);
+      AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
+      const bidRequests = AdapterManager.makeBidRequests(adUnits, Date.now(), 1234567890, 1000);
+
+      server.respondWith(
+        [
+          200,
+          { "Content-Type": "application/json" },
+          '[{ "id": 12, "comment": "Hey there" }]'
+        ]
+      );
+      AdapterManager.callBids(adUnits, bidRequests, () => {
+        console.log('addBidResponse', arguments);
+      }, () => {
+        console.log('doneCb', arguments);
+      });
+      console.log('server.requests', server.requests);
+    });
+
+    it('should do something else', function(done) {
+      AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
+      const bidRequests = AdapterManager.makeBidRequests(adUnits, Date.now(), 1234567890, 1000);
+
+      AdapterManager.callBids(adUnits, bidRequests, () => {}, () => {
+        return () => {
+          console.log('done', requests);
+          done();
+        };
+      });
+
+      requests[0].respond(200, { "Content-Type": "application/json" },
+                          '[{ "id": 12, "comment": "Hey there" }]');
+
     });
   });
 
