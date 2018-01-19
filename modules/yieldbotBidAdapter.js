@@ -2,6 +2,7 @@ import * as utils from 'src/utils';
 // import { formatQS } from 'src/url';
 import { registerBidder } from 'src/adapters/bidderFactory';
 
+
 /**
  * @module {BidderSpec} modules/YieldbotBidAdapter
  * @description Adapter for requesting bids from Yieldbot
@@ -10,6 +11,9 @@ import { registerBidder } from 'src/adapters/bidderFactory';
  * @private
  */
 export const YieldbotAdapter = {
+  _cookiesEnabled: !utils.isSafariBrowser() && utils.cookiesAreEnabled(),
+  _adapterLoaded: Date.now(),
+  _navigationStart: 0,
   /**
    * @description Yieldbot adapter internal constants
    * @memberof module:modules/YieldbotBidAdapter
@@ -158,6 +162,8 @@ export const YieldbotAdapter = {
    */
   buildRequests: function(bidRequests, bidderRequest) {
     const requestParams = this.buildBidRequestParams(bidRequests);
+
+    requestParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
     return [{
       method: 'GET',
       url: 'http://localhost:8087/frotz-mumble.json', // build Url with prefix constant and psn
@@ -288,6 +294,10 @@ export const YieldbotAdapter = {
      */
     const params = {};
 
+    params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_LOADED_TIME] = this._adapterLoaded;
+    params[this.CONSTANTS.REQUEST_PARAMS.NAVIGATION_START] = this._navigationStart;
+    params[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now(); // reset in buildRequests
+
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = _newId();
 
@@ -378,6 +388,35 @@ export const YieldbotAdapter = {
       'ybotq.push(function () {yieldbot.renderAd(\'' + slot + ':' + size + '\');});</script>';
   },
 
+  hasLocalStorage: function() { return true; },
+  cookiesEnabled: function() { return true; },
+  getCookie: function(name) {
+    const cookies = document.cookie.split(';');
+    let value = null;
+    for (let idx = 0; idx < cookies.length; idx++) {
+      const item = cookies[idx].split('=');
+      const itemName = item[0].replace(/^\s+|\s+$/g, '');
+      if (itemName == name) {
+        value = item.length > 1 ? item[1].replace(/^\s+|\s+$/g, '') : null;
+        break;
+      }
+    }
+    return value;
+  },
+  setCookie: function(name, value, expireMillis, path, domain, secure) {
+    const expireTime = expireMillis ? new Date(Date.now() + expireMillis).toGMTString() : '';
+    const dataValue = encodeURIComponent(value);
+    const docLocation = path || '';
+    const pageDomain = domain || '';
+    const httpsOnly = secure ? ';secure' : '';
+
+    const cookieStr = `${name}=${dataValue};expires=${expireTime};path=${docLocation};domain=${pageDomain}${httpsOnly}`;
+    document.cookie = cookieStr;
+  },
+  deleteCookie: function(name, path, domain, secure) {
+    return this.setCookie(name, '', -1, path, domain, secure);
+  },
+
   /**
    * Create a delegate function with 'this' context of the YieldbotAdapter object.
    * @param {Object} instance Object for 'this' context in function apply
@@ -414,4 +453,5 @@ export const spec = {
   interpretResponse: YieldbotAdapter.createDelegate(YieldbotAdapter, YieldbotAdapter.interpretResponse)
 };
 
+YieldbotAdapter._navigationStart = Date.now();
 registerBidder(spec);

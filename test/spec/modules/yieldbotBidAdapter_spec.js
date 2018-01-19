@@ -262,7 +262,15 @@ describe('Yieldbot Adapter Unit Tests', function() {
         'cts_ini',
         'e'
       ];
-      expect(Object.keys(params)).to.deep.equal(expectedParamKeys);
+
+      const missingKeys = [];
+
+      expectedParamKeys.forEach((item) => {
+        if (item in params === false) {
+          missingKeys.push(item);
+        }
+      });
+      expect(missingKeys.length, `Missing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
     });
 
     it('should build unique slot sizes', function() {
@@ -400,6 +408,10 @@ describe('Yieldbot Adapter Unit Tests', function() {
       }
     ];
 
+    it('should provide bidRequests for interpretResponse', function() {
+
+    });
+
     it('should do something', function() {
       AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
       const bidRequests = AdapterManager.makeBidRequests(adUnits, Date.now(), 1234567890, 1000);
@@ -437,51 +449,27 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe.skip('interpretResponse', () => {
-    let response = {
-      'version': '3.0.0',
-      'tags': [
+
+    const ybotResponse = {
+      pvi: 'jbgxsxqxyxvqm2oud7',
+      subdomain_iframe: 'ads-adseast-vpc',
+      url_prefix: 'http://ads-adseast-vpc.yldbt.com/m/',
+      integration_test: true,
+      warnings: [],
+      slots: [
         {
-          'uuid': '3db3773286ee59',
-          'tag_id': 10433394,
-          'auction_id': '4534722592064951574',
-          'nobid': false,
-          'no_ad_url': 'http://lax1-ib.adnxs.com/no-ad',
-          'timeout_ms': 10000,
-          'ad_profile_id': 27079,
-          'ads': [
-            {
-              'content_source': 'rtb',
-              'ad_type': 'banner',
-              'buyer_member_id': 958,
-              'creative_id': 29681110,
-              'media_type_id': 1,
-              'media_subtype_id': 1,
-              'cpm': 0.5,
-              'cpm_publisher_currency': 0.5,
-              'publisher_currency_code': '$',
-              'client_initiated_ad_counting': true,
-              'rtb': {
-                'banner': {
-                  'content': '<!-- Creative -->',
-                  'width': 300,
-                  'height': 250
-                },
-                'trackers': [
-                  {
-                    'impression_urls': [
-                      'http://lax1-ib.adnxs.com/impression'
-                    ],
-                    'video_events': {}
-                  }
-                ]
-              }
-            }
-          ]
+          slot: 'medrec',
+          cpm: '300',
+          size: '300x250'
+        }, {
+          slot: 'leaderboard',
+          cpm: '800',
+          size: '728x90'
         }
       ]
     };
 
-    it('should get correct bid response', function() {
+    it('should build bids from response', function() {
 
     });
   });
