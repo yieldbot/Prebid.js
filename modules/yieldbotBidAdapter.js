@@ -110,10 +110,56 @@ export const YieldbotAdapter = {
     return constants;
   },
 
+  _sessionBlocked: -1,
+  _optOut: false,
+
   _bidRequestData: {},
 
-  _initializeAdapter: function() {
+  _isInitialized: false,
 
+  initialize: function() {
+    if (!this._isInitialized) {
+
+      this._isInitialized = true;
+    }
+  },
+
+  get isSessionBlocked() {
+    if (this.sessionBlocked === -1) {
+      const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.USER;
+      this._sessionBlocked = this.getCookie(cookieName);
+      if (this._sessionBlocked === null) {
+        this._sessionBlocked = false;
+        this.setCookie(cookieName, 0, this.CONSTANTS.USER_ID_TIMEOUT, '/');
+      }
+    }
+    return this._sessionBlocked;
+  },
+  get userId() {
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.USER;
+    let cookieValue = this.getCookie(cookieName);
+    if (!cookieValue) {
+      cookieValue = this.newId();
+      this.setCookie(cookieName, cookieValue, this.CONSTANTS.USER_ID_TIMEOUT, '/');
+    }
+    return cookieValue;
+  },
+  get sessionId() {
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION;
+    let cookieValue = this.getCookie(cookieName);
+    if (!cookieValue) {
+      cookieValue = this.newId();
+      this.setCookie(cookieName, cookieValue, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
+    }
+    return cookieValue;
+  },
+  get previousVisitTime() {
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.PREVIOUS_VISIT;
+    let cookieValue = this.getCookie(cookieName);
+    if (!cookieValue) {
+      this.setCookie(cookieName, cookieValue, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
+    }
+    return cookieValue;
   },
 
   /**
@@ -161,15 +207,18 @@ export const YieldbotAdapter = {
    * @memberof module:modules/YieldbotBidAdapter
    */
   buildRequests: function(bidRequests, bidderRequest) {
-    const requestParams = this.buildBidRequestParams(bidRequests);
-
-    requestParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
-    return [{
-      method: 'GET',
-      url: 'http://localhost:8087/frotz-mumble.json', // build Url with prefix constant and psn
-      data: requestParams,
-      bidRequests: bidRequests
-    }];
+    const requests = [];
+    if (!this._optOut) {
+      const requestParams = this.buildBidRequestParams(bidRequests);
+      requestParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
+      requests.push({
+        method: 'GET',
+        url: 'http://localhost:8087/frotz-mumble.json', // build Url with prefix constant and psn
+        data: requestParams,
+        bidRequests: bidRequests
+      });
+    }
+    return requests;
   },
 
   /**
@@ -182,6 +231,14 @@ export const YieldbotAdapter = {
    */
   getUserSyncs: function(syncOptions, serverResponses) {
     const userSyncs = [];
+
+    /*
+     {
+       "user_syncs": [
+         "https://idsync.rlcdn.com/456839.gif?partner_uid=vjcfdub3vzykq8tjykx"
+       ]
+     }
+     */
 
     /** @TODO formalize user sync iframe html src
      if (syncOptions.iframeEnabled) {
@@ -213,21 +270,25 @@ export const YieldbotAdapter = {
   interpretResponse: function(serverResponse, bidRequest) {
     /*
      {
-       "pvi": "jbgxsxqxyxvqm2oud7",
+       "errors": [],
+       "warnings": [],
+       "pvi": "jcj55dnwg9urszzf23",
+       "optout": false,
+       "block_session": false,
        "subdomain_iframe": "ads-adseast-vpc",
        "url_prefix": "http://ads-adseast-vpc.yldbt.com/m/",
-       "integration_test": true,
-       "warnings": [],
-       "slots": [
-         {
-           "slot": "medrec",
-           "cpm": "300",
-           "size": "300x250"
-         }, {
-           "slot": "leaderboard",
-           "cpm": "800",
-           "size": "728x90"
-         }
+       "slots": [{
+         "slot": "medrec",
+         "size": "300x250",
+         "cpm": "300"
+       }],
+       "third_party_keys": {
+         "hashed_ip": "5f04a50d0df1bf6e20d47bad464b8442",
+         "vi": "jcfdub3vzykq8tjykx",
+         "uuid": "jcfdub4tu6t0zags"
+       },
+       "user_syncs": [
+         "https://idsync.rlcdn.com/456839.gif?partner_uid=vjcfdub3vzykq8tjykx"
        ]
      }
     */
@@ -237,6 +298,8 @@ export const YieldbotAdapter = {
 
     console.log('interpretResponse.serverResponse.body:', serverResponse.body);
     console.log('interpretResponse.bidRequest:', bidRequest);
+
+    this._optOut = serverResponse.optout || false;
 
     const bidResponses = [];
     const slotBids = serverResponse.body && serverResponse.body.slots ? serverResponse.body.slots : [];
@@ -250,7 +313,7 @@ export const YieldbotAdapter = {
         cpm: 2,
         width: 250,
         height: 300,
-        creativeId: _newId(),
+        creativeId: this.newId(),
         currency: 'USD',
         netRevenue: true,
         ttl: 180, // [s]
@@ -299,7 +362,7 @@ export const YieldbotAdapter = {
     params[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now(); // reset in buildRequests
 
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
-    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = _newId();
+    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = this.newId();
 
     const slotSizesParams = this._getUniqueSlotSizes(bidRequests);
     params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = slotSizesParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] || '';
@@ -416,6 +479,18 @@ export const YieldbotAdapter = {
   deleteCookie: function(name, path, domain, secure) {
     return this.setCookie(name, '', -1, path, domain, secure);
   },
+  /**
+   * Generate a new Yieldbot format id<br>
+   * Base 36 and lowercase: <[ms] since epoch><[base36]{10}>
+   * @example "jbgxsyrlx9fxnr1hbl"
+   * @private
+   */
+  newId: function() {
+    return (+new Date()).toString(36) + 'xxxxxxxxxx'
+      .replace(/[x]/g, function() {
+        return (0 | Math.random() * 36).toString(36);
+      });
+  },
 
   /**
    * Create a delegate function with 'this' context of the YieldbotAdapter object.
@@ -431,18 +506,7 @@ export const YieldbotAdapter = {
   }
 };
 
-/**
- * Generate a new Yieldbot format id<br>
- * Base 36 and lowercase: <[ms] since epoch><[base36]{10}>
- * @example "jbgxsyrlx9fxnr1hbl"
- * @private
- */
-function _newId() {
-  return (+new Date()).toString(36) + 'xxxxxxxxxx'
-    .replace(/[x]/g, function() {
-      return (0 | Math.random() * 36).toString(36);
-    });
-}
+YieldbotAdapter.initialize();
 
 export const spec = {
   code: YieldbotAdapter.code,

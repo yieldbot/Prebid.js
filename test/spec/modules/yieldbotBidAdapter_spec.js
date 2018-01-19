@@ -4,7 +4,7 @@ import { newBidder } from 'src/adapters/bidderFactory';
 import AdapterManager from 'src/adaptermanager';
 import * as utils from 'src/utils';
 
-describe('Yieldbot Adapter Unit Tests', function() {
+describe.only('Yieldbot Adapter Unit Tests', function() {
 
   describe('Adapter spec API', function() {
     it('code', function() {
@@ -226,8 +226,15 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
+  describe('getCookie', function() {
+    it('should return if cookie name not found exist', function() {
+      const cookieName = YieldbotAdapter.newId();
+      expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
+    });
+  });
+
   describe('buildBidRequestParams', function() {
-    it.only('should build all parameters', function() {
+    it('should build all parameters', function() {
       const params = YieldbotAdapter.buildBidRequestParams(
         [
           {
