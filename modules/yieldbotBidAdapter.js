@@ -1,5 +1,4 @@
 import * as utils from 'src/utils';
-// import { formatQS } from 'src/url';
 import { registerBidder } from 'src/adapters/bidderFactory';
 
 
@@ -58,56 +57,53 @@ export const YieldbotAdapter = {
    * @private
    * @TODO optional properties
    */
-  get CONSTANTS() {
-    const constants = {
-      VERSION: 'pbjs-1.0.0',
-      DEFAULT_BID_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
-      REQUEST_API_VERSION: 'v1',
-      SESSION_ID_TIMEOUT: 180000,
-      USER_ID_TIMEOUT: 2592000000,
-      VISIT_ID_TIMEOUT: 2592000000,
-      COOKIE_PREFIX: '__ybot',
-      REQUEST_PARAMS: {
-        ADAPTER_VERSION: 'v',
-        USER_ID: 'vi',
-        SESSION_ID: 'si',
-        PAGEVIEW_ID: 'pvi',
-        AD_REQUEST_ID: 'ri',
-        AD_REQUEST_SLOT: 'slot',
-        PAGEVIEW_DEPTH: 'pvd',
-        LAST_PAGEVIEW_ID: 'lpvi',
-        BID_SLOT_NAME: 'sn',
-        BID_SLOT_SIZE: 'ssz',
-        LOCATION: 'lo',
-        REFERRER: 'r',
-        SCREEN_DIMENSIONS: 'sd',
-        TIMEZONE_OFFSET: 'to',
-        LANGUAGE: 'la',
-        NAVIGATOR_PLATFORM: 'np',
-        USER_AGENT: 'ua',
-        LAST_PAGEVIEW_TIME: 'lpv',
-        NAVIGATION_START: 'cts_ns',
-        ADAPTER_LOADED_TIME: 'cts_js',
-        BID_REQUEST_TIME: 'cts_ini',
-        BID_RESPONSE_TIME: 'cts_res',
-        AD_REQUEST_TIME: 'cts_ad',
-        AD_RENDER_TIME: 'cts_rend',
-        AD_IMPRESSION_TIME: 'cts_imp',
-        ADAPTER_ERROR: 'apie',
-        INTERSECTION_OBSERVER_AVAILABLE: 'ioa',
-        IFRAME_TYPE: 'it',
-        SESSION_BLOCKED: 'sb',
-        BID_TYPE: 'bt',
-        TERMINATOR: 'e'
-      },
-      COOKIES: {
-        SESSION_BLOCKED: 'n',
-        SESSION: 's',
-        USER: 'u',
-        PREVIOUS_VISIT: 'v'
-      }
-    };
-    return constants;
+  CONSTANTS: {
+    VERSION: 'pbjs-1.0.0',
+    DEFAULT_BID_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
+    REQUEST_API_VERSION: 'v1',
+    SESSION_ID_TIMEOUT: 180000,
+    USER_ID_TIMEOUT: 2592000000,
+    VISIT_ID_TIMEOUT: 2592000000,
+    COOKIE_PREFIX: '__ybot',
+    REQUEST_PARAMS: {
+      ADAPTER_VERSION: 'v',
+      USER_ID: 'vi',
+      SESSION_ID: 'si',
+      PAGEVIEW_ID: 'pvi',
+      AD_REQUEST_ID: 'ri',
+      AD_REQUEST_SLOT: 'slot',
+      PAGEVIEW_DEPTH: 'pvd',
+      LAST_PAGEVIEW_ID: 'lpvi',
+      BID_SLOT_NAME: 'sn',
+      BID_SLOT_SIZE: 'ssz',
+      LOCATION: 'lo',
+      REFERRER: 'r',
+      SCREEN_DIMENSIONS: 'sd',
+      TIMEZONE_OFFSET: 'to',
+      LANGUAGE: 'la',
+      NAVIGATOR_PLATFORM: 'np',
+      USER_AGENT: 'ua',
+      LAST_PAGEVIEW_TIME: 'lpv',
+      NAVIGATION_START: 'cts_ns',
+      ADAPTER_LOADED_TIME: 'cts_js',
+      BID_REQUEST_TIME: 'cts_ini',
+      BID_RESPONSE_TIME: 'cts_res',
+      AD_REQUEST_TIME: 'cts_ad',
+      AD_RENDER_TIME: 'cts_rend',
+      AD_IMPRESSION_TIME: 'cts_imp',
+      ADAPTER_ERROR: 'apie',
+      INTERSECTION_OBSERVER_AVAILABLE: 'ioa',
+      IFRAME_TYPE: 'it',
+      SESSION_BLOCKED: 'sb',
+      BID_TYPE: 'bt',
+      TERMINATOR: 'e'
+    },
+    COOKIES: {
+      SESSION_BLOCKED: 'n',
+      SESSION: 's',
+      USER: 'u',
+      PREVIOUS_VISIT: 'v'
+    }
   },
 
   _sessionBlocked: -1,
