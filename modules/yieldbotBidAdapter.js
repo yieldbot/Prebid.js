@@ -125,16 +125,15 @@ export const YieldbotAdapter = {
   },
 
   get isSessionBlocked() {
-    if (this.sessionBlocked === -1) {
-      const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.USER;
-      this._sessionBlocked = this.getCookie(cookieName);
-      if (this._sessionBlocked === null) {
-        this._sessionBlocked = false;
-        this.setCookie(cookieName, 0, this.CONSTANTS.USER_ID_TIMEOUT, '/');
-      }
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_BLOCKED;
+    const cookieValue = this.getCookie(cookieName);
+    let sessionBlocked = cookieValue ? parseInt(cookieValue, 10) || 0 : 0;
+    if (sessionBlocked) {
+      this.setCookie(cookieName, 1, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     }
-    return this._sessionBlocked;
+    return !!sessionBlocked;
   },
+
   get userId() {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.USER;
     let cookieValue = this.getCookie(cookieName);
@@ -144,6 +143,7 @@ export const YieldbotAdapter = {
     }
     return cookieValue;
   },
+
   get sessionId() {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION;
     let cookieValue = this.getCookie(cookieName);
@@ -153,6 +153,7 @@ export const YieldbotAdapter = {
     }
     return cookieValue;
   },
+
   get previousVisitTime() {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.PREVIOUS_VISIT;
     let cookieValue = this.getCookie(cookieName);
