@@ -15,6 +15,7 @@ export const YieldbotAdapter = {
   _navigationStart: 0,
   /**
    * @description Yieldbot adapter internal constants
+   * @constant
    * @memberof module:modules/YieldbotBidAdapter
    * @property {string} VERSION Yieldbot adapter version string: <pre>'pbjs-{major}.{minor}.{patch}'</pre>
    * @property {string} DEFAULT_BID_REQUEST_URL_PREFIX Request Url prefix to use when ad server response has not provided availability zone specific prefix
@@ -106,15 +107,39 @@ export const YieldbotAdapter = {
     }
   },
 
-  _sessionBlocked: -1,
-  _optOut: false,
-
-  _bidRequestData: {},
+  /**
+   * @typeDef {YieldbotBidState} YieldbotBidState
+   * @property {string} userId
+   * @property {string} sessionId
+   * @property {string} pageviewId
+   * @property {number} sessionDepth
+   * @memberof module:modules/YieldbotBidAdapter
+   * @private
+   */
+  /**
+   * Internal Yieldbot adapter bid and ad markup request state
+   * @property {Object.<string, module:modules/YieldbotBidAdapter.YieldbotBidState>} {*} the ad/bid identifier
+   * @memberof module:modules/YieldbotBidAdapter
+   * @inner
+   * @private
+   * @example
+   {
+     "2b7e31676ce17": {
+       "userId": "jcfdub4tu6t0zags",
+       "sessionId": "jcfdub3vzykq8tjykx",
+       "pageviewId": "jbgxsxqxyxvqm2oud7",
+       "sessionDepth": 1
+     }
+   }
+   */
+  bidRequestData: {},
 
   _isInitialized: false,
-
   initialize: function() {
     if (!this._isInitialized) {
+
+
+
 
       this._isInitialized = true;
     }
@@ -214,6 +239,7 @@ export const YieldbotAdapter = {
    * @memberof module:modules/YieldbotBidAdapter
    */
   buildRequests: function(bidRequests, bidderRequest) {
+    console.log('buildRequests', bidRequests);
     const requests = [];
     if (!this._optOut) {
       const requestParams = this.buildBidRequestParams(bidRequests);
@@ -306,30 +332,30 @@ export const YieldbotAdapter = {
     console.log('interpretResponse.serverResponse.body:', serverResponse.body);
     console.log('interpretResponse.bidRequest:', bidRequest);
 
-    this._optOut = serverResponse.optout || false;
-
+    const optOut = serverResponse.optout || false;
     const bidResponses = [];
-    const slotBids = serverResponse.body && serverResponse.body.slots ? serverResponse.body.slots : [];
-    slotBids.forEach((bid) => {
-      const slot = bid.slot;
-      const size = bid.size;
-      const cpm = bid.cpm;
+    if (!optOut) {
+      const slotBids = serverResponse.body && serverResponse.body.slots ? serverResponse.body.slots : [];
+      slotBids.forEach((bid) => {
+        const slot = bid.slot;
+        const size = bid.size;
+        const cpm = bid.cpm;
 
-      const bidResponse = {
-        requestId: bidRequest.bidRequests[0].bidId,
-        cpm: 2,
-        width: 250,
-        height: 300,
-        creativeId: this.newId(),
-        currency: 'USD',
-        netRevenue: true,
-        ttl: 180, // [s]
-        //ad: '<h2>It works...</h2><div style="background: lemonchiffon;"><p>However, HTML needs viewability script and pixel call</p><p>Preference would be to have a GET request in both <code>ad:</code> and <code>adUrl:</code> cases return the <code>&lt;html&gt;</code> element containing all parts of the creative including scripts.</p></div>'
-        adUrl: 'http://localhost:8087/yb-creative.html'
-      };
-      bidResponses.push(bidResponse);
-    });
-
+        const bidResponse = {
+          requestId: bidRequest.bidRequests[0].bidId,
+          cpm: 2,
+          width: 250,
+          height: 300,
+          creativeId: this.newId(),
+          currency: 'USD',
+          netRevenue: true,
+          ttl: 180, // [s]
+          //ad: '<h2>It works...</h2><div style="background: lemonchiffon;"><p>However, HTML needs viewability script and pixel call</p><p>Preference would be to have a GET request in both <code>ad:</code> and <code>adUrl:</code> cases return the <code>&lt;html&gt;</code> element containing all parts of the creative including scripts.</p></div>'
+          adUrl: 'http://localhost:8087/yb-creative.html'
+        };
+        bidResponses.push(bidResponse);
+      });
+    }
     return bidResponses;
   },
 
@@ -369,6 +395,10 @@ export const YieldbotAdapter = {
     params[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now(); // reset in buildRequests
 
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
+
+    params[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = this.userId;
+    params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = this.sessionId;
+
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = this.newId();
 
     const slotSizesParams = this._getUniqueSlotSizes(bidRequests);
