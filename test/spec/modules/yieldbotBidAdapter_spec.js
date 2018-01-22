@@ -316,6 +316,48 @@ describe.only('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
+  describe('userId', function() {
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.USER_ID;
+
+    afterEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+      expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
+    });
+
+    it('should set a user Id if cookie does not exist', function() {
+      const userId = YieldbotAdapter.userId;
+      expect(userId).to.match(/[0-9a-z]{18}/);
+    });
+
+    it('should return user Id if cookie exists', function() {
+      const expectedUserId = YieldbotAdapter.newId();
+      YieldbotAdapter.setCookie(cookieName, expectedUserId, YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
+      const userId = YieldbotAdapter.userId;
+      expect(userId).to.equal(expectedUserId);
+    });
+  });
+
+  describe('sessionId', function() {
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.SESSION_ID;
+
+    afterEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+      expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
+    });
+
+    it('should set a session Id if cookie does not exist', function() {
+      const sessionId = YieldbotAdapter.sessionId;
+      expect(sessionId).to.match(/[0-9a-z]{18}/);
+    });
+
+    it('should return session Id if cookie exists', function() {
+      const expectedSessionId = YieldbotAdapter.newId();
+      YieldbotAdapter.setCookie(cookieName, expectedSessionId, YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
+      const sessionId = YieldbotAdapter.sessionId;
+      expect(sessionId).to.equal(expectedSessionId);
+    });
+  });
+
   describe('buildBidRequestParams', function() {
     it('should build all parameters', function() {
       const params = YieldbotAdapter.buildBidRequestParams(

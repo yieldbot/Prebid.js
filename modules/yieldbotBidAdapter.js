@@ -100,8 +100,8 @@ export const YieldbotAdapter = {
     },
     COOKIES: {
       SESSION_BLOCKED: 'n',
-      SESSION: 's',
-      USER: 'u',
+      SESSION_ID: 's',
+      USER_ID: 'u',
       PREVIOUS_VISIT: 'v'
     }
   },
@@ -131,7 +131,7 @@ export const YieldbotAdapter = {
   },
 
   get userId() {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.USER;
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.USER_ID;
     let cookieValue = this.getCookie(cookieName);
     if (!cookieValue) {
       cookieValue = this.newId();
@@ -141,7 +141,7 @@ export const YieldbotAdapter = {
   },
 
   get sessionId() {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION;
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_ID;
     let cookieValue = this.getCookie(cookieName);
     if (!cookieValue) {
       cookieValue = this.newId();
