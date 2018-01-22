@@ -120,6 +120,16 @@ export const YieldbotAdapter = {
     }
   },
 
+  /**
+   * Is the user session blocked by the Yieldbot adserver.<br>
+   * The Yieldbot adserver may return <code>"block_session": true</code> in a bid response.
+   * A session may be blocked for efficiency (i.e. Yieldbot has decided no to bid for the session),
+   * security and/or fraud detection.
+   * @returns {boolean}
+   * @readonly
+   * @memberof module:modules/YieldbotBidAdapter
+   * @private
+   */
   get isSessionBlocked() {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_BLOCKED;
     const cookieValue = this.getCookie(cookieName);
