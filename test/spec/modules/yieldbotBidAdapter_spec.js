@@ -398,7 +398,7 @@ describe.only('Yieldbot Adapter Unit Tests', function() {
       const missingKeys = [];
 
       expectedParamKeys.forEach((item) => {
-        if (item in params === false) {
+        if (item in params.searchParams === false) {
           missingKeys.push(item);
         }
       });
@@ -451,9 +451,9 @@ describe.only('Yieldbot Adapter Unit Tests', function() {
         }
       ];
       const params = YieldbotAdapter.buildBidRequestParams(bidRequests);
-      expect(params[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME])
+      expect(params.searchParams[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME])
         .to.equal('medrec|leaderboard|footerboard');
-      expect(params[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE])
+      expect(params.searchParams[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE])
         .to.equal('300x250.300x600.160x600|970x90.728x90|728x90');
     });
   });

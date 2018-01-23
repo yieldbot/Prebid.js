@@ -1,4 +1,5 @@
 import * as utils from 'src/utils';
+import { format as buildUrl} from '../src/url';
 import { registerBidder } from 'src/adapters/bidderFactory';
 
 
@@ -243,11 +244,12 @@ export const YieldbotAdapter = {
     const requests = [];
     if (!this._optOut) {
       const requestParams = this.buildBidRequestParams(bidRequests);
-      requestParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
+      console.log('requestParams', requestParams);
+      requestParams.searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
       requests.push({
         method: 'GET',
         url: 'http://localhost:8087/frotz-mumble.json', // build Url with prefix constant and psn
-        data: requestParams,
+        data: requestParams.searchParams,
         bidRequests: bidRequests
       });
     }
@@ -405,10 +407,29 @@ export const YieldbotAdapter = {
     return bidResponses;
   },
 
+  buildAdUrl: function(requestData, slotName, size) {
+
+    const someUrl = buildUrl({
+      protocol: 'https',
+      host: 'pubads.g.doubleclick.net',
+      pathname: '/gampad/ads',
+      search: {}
+    });
+  },
+
+  /**
+   * @typeDef {YieldbotBidParams} YieldbotBidParams
+   * @property {string} psn Yieldbot publisher customer number
+   * @property {object} searchParams bid request Url search parameters
+   * @property {object} searchParams.sn slot names
+   * @property {object} searchParams.szz slot sizes
+   * @memberof module:modules/YieldbotBidAdapter
+   * @private
+   */
   /**
    * Builds the Yieldbot bid request Url query parameters
    * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server
-   * @returns {object} query parameter key/value object
+   * @returns {YieldbotBidParams} query parameter key/value object
    * @memberof module:modules/YieldbotBidAdapter
    * @private
    */
@@ -473,13 +494,25 @@ export const YieldbotAdapter = {
     params[this.CONSTANTS.REQUEST_PARAMS.REFERRER] = utils.getTopWindowReferrer();
 
     params[this.CONSTANTS.REQUEST_PARAMS.TERMINATOR] = '';
-    return params;
+
+    return {
+      psn: slotSizesParams.psn || '',
+      searchParams: params
+    };
   },
 
   /**
+   * @typeDef {YieldbotBidSlots} YieldbotBidSlots
+   * @property {string} psn Yieldbot publisher site identifier taken from bidder params
+   * @property {string} sn slot names
+   * @property {string} szz slot sizes
+   * @memberof module:modules/YieldbotBidAdapter
+   * @private
+   *
+  /**
    * Gets unique slot name and sizes for query parameters object
    * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server
-   * @returns {object} query parameters object <code>{sn: '', ssz: ''}</code>
+   * @returns {YielcotBidSlots} publisher identifier and slots to bid on
    * @memberof module:modules/YieldbotBidAdapter
    * @private
    */
@@ -489,6 +522,7 @@ export const YieldbotAdapter = {
       const slotBids = {};
       bidRequests.forEach((bid) => {
         slotBids[bid.params.slot] = slotBids[bid.params.slot] || [];
+        params.psn = params.psn || bid.params.psn || '';
         utils.parseSizesInput(bid.sizes).forEach(sz => {
           if (!slotBids[bid.params.slot].some(existingSize => existingSize === sz)) {
             slotBids[bid.params.slot].push(sz);
