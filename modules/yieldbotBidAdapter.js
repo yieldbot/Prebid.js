@@ -326,6 +326,52 @@ export const YieldbotAdapter = {
      }
     */
 
+    /*
+     * Yieldbot bidRequestData
+     {
+       "2b7e31676ce17": {
+         "userId": "jcfdub4tu6t0zags",
+         "sessionId": "jcfdub3vzykq8tjykx",
+         "pageviewId": "jbgxsxqxyxvqm2oud7",
+         "sessionDepth": 1
+       }
+     }
+     */
+
+    /*
+     * medrec:300x250
+     * http://ads-adslocal.yldbt.com/m/1234/ad/creative.js?v=v2017-11-13%7Cc454d60&vi=jcrvox3iizqzlxc38k&si=jcrvtw8iy5f9xe8108&ri=jcrvvd59iqu2mgcfan&slot=medrec%3A300x250&pvi=jcrvvc97rt7z9ams6a&cts_res=1516726623753&cts_ad=1516726624080&ioa&it=so&e
+
+     v:       v2017-11-13|c454d60
+     vi:      jcrvox3iizqzlxc38k
+     si:      jcrvtw8iy5f9xe8108
+     ri:      jcrvvd59iqu2mgcfan
+     slot:    medrec:300x250
+     pvi:     jcrvvc97rt7z9ams6a
+     cts_res: 1516726623753
+     cts_ad:  1516726624080
+     ioa:
+     it:      so
+     e:
+
+     *
+     * leaderboard:728x90
+     * http://ads-adslocal.yldbt.com/m/1234/ad/creative.js?v=v2017-11-13%7Cc454d60&vi=jcrvox3iizqzlxc38k&si=jcrvtw8iy5f9xe8108&ri=jcrvvd6eoileb8w8ko&slot=leaderboard%3A728x90&pvi=jcrvvc97rt7z9ams6a&cts_res=1516726623753&cts_ad=1516726624121&ioa&it=so&e
+     v:       v2017-11-13|c454d60
+     vi:      jcrvox3iizqzlxc38k
+     si:      jcrvtw8iy5f9xe8108
+     ri:      jcrvvd6eoileb8w8ko
+     slot:    leaderboard:728x90
+     pvi:     jcrvvc97rt7z9ams6a
+     cts_res: 1516726623753
+     cts_ad:  1516726624121
+     ioa:
+     it:      so
+     e:
+
+     *
+     */
+
     // const serverBody = serverResponse.body;
     // const headerValue = serverResponse.headers.get('some-response-header')
 
@@ -396,11 +442,23 @@ export const YieldbotAdapter = {
 
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
 
-    params[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = this.userId;
-    params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = this.sessionId;
-
-    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = this.newId();
-
+    const userId = this.userId;
+    const sessionId = this.sessionId;
+    const pageviewId = this.newId();
+    params[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = userId;
+    params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = sessionId;
+    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = pageviewId;
+    /*
+     * Yieldbot bidRequestData
+     {
+       "2b7e31676ce17": {
+         "userId": "jcfdub4tu6t0zags",
+         "sessionId": "jcfdub3vzykq8tjykx",
+         "pageviewId": "jbgxsxqxyxvqm2oud7",
+         "sessionDepth": 1
+       }
+     }
+     */
     const slotSizesParams = this._getUniqueSlotSizes(bidRequests);
     params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = slotSizesParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] || '';
     params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] = slotSizesParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] || '';
