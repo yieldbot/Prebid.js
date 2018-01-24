@@ -227,7 +227,7 @@ describe.only('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('getCookie', function() {
-    it('should return if cookie name not found', function() {
+    it('should return null if cookie name not found', function() {
       const cookieName = YieldbotAdapter.newId();
       expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
     });

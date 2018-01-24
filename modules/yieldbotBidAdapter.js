@@ -62,7 +62,9 @@ export const YieldbotAdapter = {
   CONSTANTS: {
     VERSION: 'pbjs-1.0.0',
     DEFAULT_BID_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
-    REQUEST_API_VERSION: 'v1',
+    REQUEST_API_VERSION: '/v1',
+    REQUEST_API_PATH_BID: '/init',
+    REQUEST_API_PATH_CREATIVE: '/creative.js',
     SESSION_ID_TIMEOUT: 180000,
     USER_ID_TIMEOUT: 2592000000,
     VISIT_ID_TIMEOUT: 2592000000,
@@ -102,8 +104,10 @@ export const YieldbotAdapter = {
     },
     COOKIES: {
       SESSION_BLOCKED: 'n',
-      SESSION_ID: 's',
-      USER_ID: 'u',
+      SESSION_ID: 'si',
+      PAGEVIEW_DEPTH: 'pvd',
+      USER_ID: 'vi',
+      LAST_PAGEVIEW_ID: 'lpvi',
       PREVIOUS_VISIT: 'v'
     }
   },
@@ -117,6 +121,7 @@ export const YieldbotAdapter = {
    * @memberof module:modules/YieldbotBidAdapter
    * @private
    */
+
   /**
    * Internal Yieldbot adapter bid and ad markup request state
    * @property {Object.<string, module:modules/YieldbotBidAdapter.YieldbotBidState>} {*} the ad/bid identifier
@@ -135,12 +140,11 @@ export const YieldbotAdapter = {
    */
   bidRequestData: {},
 
+  _pageviewDepth: 0,
   _isInitialized: false,
   initialize: function() {
     if (!this._isInitialized) {
-
-
-
+      this._pageviewDepth = parseInt(this.getCookie(this.CONSTANTS.COOKIES.PAGEVIEW_DEPTH), 10) || 0;
 
       this._isInitialized = true;
     }
@@ -240,19 +244,30 @@ export const YieldbotAdapter = {
    * @memberof module:modules/YieldbotBidAdapter
    */
   buildRequests: function(bidRequests, bidderRequest) {
-    console.log('buildRequests', bidRequests);
     const requests = [];
     if (!this._optOut) {
       const requestParams = this.buildBidRequestParams(bidRequests);
-      console.log('requestParams', requestParams);
       requestParams.searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
+
+      /** TODO: hard coded for initial tests */
+      requestParams.searchParams['cb'] = 'yieldbot.updateState';
+      /** TODO: see previous */
+
+      const bidUrl = '' +
+              this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX +
+              requestParams.psn +
+              this.CONSTANTS.REQUEST_API_VERSION +
+              this.CONSTANTS.REQUEST_API_PATH_BID;
+
       requests.push({
         method: 'GET',
-        url: 'http://localhost:8087/frotz-mumble.json', // build Url with prefix constant and psn
+        url: bidUrl, //'http://localhost:8087/frotz-mumble.json', // build Url with prefix constant and psn
         data: requestParams.searchParams,
         bidRequests: bidRequests
       });
     }
+
+    console.log('requests', requests);
     return requests;
   },
 
@@ -468,6 +483,7 @@ export const YieldbotAdapter = {
     const pageviewId = this.newId();
     params[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = userId;
     params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = sessionId;
+    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH] = this._pageviewDepth + 1;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = pageviewId;
     /*
      * Yieldbot bidRequestData
