@@ -249,10 +249,6 @@ export const YieldbotAdapter = {
       const requestParams = this.buildBidRequestParams(bidRequests);
       requestParams.searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
 
-      /** TODO: hard coded for initial tests */
-      requestParams.searchParams['cb'] = 'yieldbot.updateState';
-      /** TODO: see previous */
-
       const bidUrl = '' +
               this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX +
               requestParams.psn +
@@ -263,7 +259,13 @@ export const YieldbotAdapter = {
         method: 'GET',
         url: bidUrl, //'http://localhost:8087/frotz-mumble.json', // build Url with prefix constant and psn
         data: requestParams.searchParams,
-        bidRequests: bidRequests
+        bidRequests: bidRequests,
+        options: {
+          withCredentials: false,
+          customHeaders: {
+            Accept: 'application/json'
+          }
+        }
       });
     }
 
