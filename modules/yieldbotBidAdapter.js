@@ -261,7 +261,7 @@ export const YieldbotAdapter = {
         data: requestParams.searchParams,
         bidRequests: bidRequests,
         options: {
-          withCredentials: false,
+          withCredentials: true,
           customHeaders: {
             Accept: 'application/json'
           }
