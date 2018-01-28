@@ -31,35 +31,49 @@
          var PREBID_TIMEOUT = 3000;
 
          pbjs.que.push(function () {
-             var adUnit17 = {
-                 code: '/2476204/multi-size',
+             var adUnit0 = {
+                 code: '/2476204/leaderboard',
+                 sizes: [728, 90],
+                 bids: [
+                     {
+                         bidder: 'yieldbot',
+                         params: {
+                             psn: '1234',
+                             slot: 'leaderboard'
+                         }
+                     }
+                 ]
+             };
+
+             var adUnit1 = {
+                 code: '/2476204/medium-rectangle',
                  sizes: [300, 250],
                  bids: [
                      {
                          bidder: 'yieldbot',
                          params: {
                              psn: '1234',
-                             slot: 'medrec'
+                             slot: 'sidebar'
                          }
                      }
                  ]
              };
 
-             var adUnit18 = {
-                 code: '/2476204/multi-size',
+             var adUnit2 = {
+                 code: '/2476204/medium-rectangle',
                  sizes: [[300,600], [160, 600]],
                  bids: [
                      {
                          bidder: 'yieldbot',
                          params: {
                              psn: '1234',
-                             slot: 'medrec'
+                             slot: 'sidebar'
                          }
                      }
                  ]
              };
 
-             pbjs.addAdUnits([adUnit17, adUnit18]);
+             pbjs.addAdUnits([adUnit0, adUnit1, adUnit2]);
              pbjs.requestBids({
                  bidsBackHandler: sendAdserverRequest
              });

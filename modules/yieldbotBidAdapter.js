@@ -61,7 +61,7 @@ export const YieldbotAdapter = {
    */
   CONSTANTS: {
     VERSION: 'pbjs-1.0.0',
-    DEFAULT_BID_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
+    DEFAULT_BID_REQUEST_URL_PREFIX: 'i.yldbt.com/m/',
     REQUEST_API_VERSION: '/v1',
     REQUEST_API_PATH_BID: '/init',
     REQUEST_API_PATH_CREATIVE: '/creative.js',
@@ -69,6 +69,11 @@ export const YieldbotAdapter = {
     USER_ID_TIMEOUT: 2592000000,
     VISIT_ID_TIMEOUT: 2592000000,
     COOKIE_PREFIX: '__ybot',
+    IFRAME_TYPE: {
+      NONE: 'none',
+      SAME_ORIGIN: 'so',
+      CROSS_ORIGIN: 'co'
+    },
     REQUEST_PARAMS: {
       ADAPTER_VERSION: 'v',
       USER_ID: 'vi',
@@ -257,7 +262,7 @@ export const YieldbotAdapter = {
 
       requests.push({
         method: 'GET',
-        url: bidUrl, //'http://localhost:8087/frotz-mumble.json', // build Url with prefix constant and psn
+        url: bidUrl,
         data: requestParams.searchParams,
         bidRequests: bidRequests,
         options: {
@@ -321,43 +326,6 @@ export const YieldbotAdapter = {
    */
   interpretResponse: function(serverResponse, bidRequest) {
     /*
-     {
-       "errors": [],
-       "warnings": [],
-       "pvi": "jcj55dnwg9urszzf23",
-       "optout": false,
-       "block_session": false,
-       "subdomain_iframe": "ads-adseast-vpc",
-       "url_prefix": "http://ads-adseast-vpc.yldbt.com/m/",
-       "slots": [{
-         "slot": "medrec",
-         "size": "300x250",
-         "cpm": "300"
-       }],
-       "third_party_keys": {
-         "hashed_ip": "5f04a50d0df1bf6e20d47bad464b8442",
-         "vi": "jcfdub3vzykq8tjykx",
-         "uuid": "jcfdub4tu6t0zags"
-       },
-       "user_syncs": [
-         "https://idsync.rlcdn.com/456839.gif?partner_uid=vjcfdub3vzykq8tjykx"
-       ]
-     }
-    */
-
-    /*
-     * Yieldbot bidRequestData
-     {
-       "2b7e31676ce17": {
-         "userId": "jcfdub4tu6t0zags",
-         "sessionId": "jcfdub3vzykq8tjykx",
-         "pageviewId": "jbgxsxqxyxvqm2oud7",
-         "sessionDepth": 1
-       }
-     }
-     */
-
-    /*
      * medrec:300x250
      * http://ads-adslocal.yldbt.com/m/1234/ad/creative.js?v=v2017-11-13%7Cc454d60&vi=jcrvox3iizqzlxc38k&si=jcrvtw8iy5f9xe8108&ri=jcrvvd59iqu2mgcfan&slot=medrec%3A300x250&pvi=jcrvvc97rt7z9ams6a&cts_res=1516726623753&cts_ad=1516726624080&ioa&it=so&e
 
@@ -391,32 +359,43 @@ export const YieldbotAdapter = {
      *
      */
 
-    // const serverBody = serverResponse.body;
-    // const headerValue = serverResponse.headers.get('some-response-header')
-
-    console.log('interpretResponse.serverResponse.body:', serverResponse.body);
-    console.log('interpretResponse.bidRequest:', bidRequest);
-
-    const optOut = serverResponse.optout || false;
     const bidResponses = [];
-    if (!optOut) {
-      const slotBids = serverResponse.body && serverResponse.body.slots ? serverResponse.body.slots : [];
-      slotBids.forEach((bid) => {
-        const slot = bid.slot;
-        const size = bid.size;
-        const cpm = bid.cpm;
+    const responseBody = serverResponse && serverResponse.body ? serverResponse.body : {};
+    const slotBids = responseBody.slots || null;
+    const optOut = responseBody.optout || false;
+    if (!optOut && slotBids) {
 
+      const bidData = {};
+      bidData[this.CONSTANTS.REQUEST_PARAMS.VERSION] = this.CONSTANTS.VERSION;
+      bidData[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequest.data.vi || this.CONSTANTS.VERSION + '-vi';
+      bidData[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequest.data.si || this.CONSTANTS.VERSION + '-si';
+      bidData[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequest.data.pvi || this.CONSTANTS.VERSION + '-pvi';
+
+      slotBids.forEach((bid) => {
+        const sizeParts = bid.size ? bid.size.split('x') : [1, 1];
+        const width = sizeParts[0] || 1;
+        const height = sizeParts[1] || 1;
+        const cpm = bid.cpm || '0';
+
+        const searchParams = Object.assign({}, bidData);
+
+        searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = this.newId();
+        searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_SLOT] = `${bid.slot}:${bid.size || '1x1'}`;
+        searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
+        searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
+        searchParams[this.CONSTANTS.REQUEST_PARAMS.TERMINATOR] = '';
+
+        const adUrl = this.buildAdUrl(searchParams);
         const bidResponse = {
-          requestId: bidRequest.bidRequests[0].bidId,
-          cpm: 2,
-          width: 250,
-          height: 300,
+          requestId: bidRequest.bidRequests[0].bidId, // TODO: correlate bidId
+          cpm: cpm,
+          width: width,
+          height: height,
           creativeId: this.newId(),
           currency: 'USD',
           netRevenue: true,
-          ttl: 180, // [s]
-          //ad: '<h2>It works...</h2><div style="background: lemonchiffon;"><p>However, HTML needs viewability script and pixel call</p><p>Preference would be to have a GET request in both <code>ad:</code> and <code>adUrl:</code> cases return the <code>&lt;html&gt;</code> element containing all parts of the creative including scripts.</p></div>'
-          adUrl: 'http://localhost:8087/yb-creative.html'
+          ttl: this.CONSTANTS.SESSION_ID_TIMEOUT / 1000, // [s]
+          adUrl: adUrl
         };
         bidResponses.push(bidResponse);
       });
@@ -424,14 +403,45 @@ export const YieldbotAdapter = {
     return bidResponses;
   },
 
-  buildAdUrl: function(requestData, slotName, size) {
+  iframeType: function (win) {
+    let it = this.CONSTANTS.IFRAME_TYPE.NONE;
+    while (win !== window.top) {
+      try {
+        win = win.parent;
+        const tmp = win.document;
+        it = this.CONSTANTS.IFRAME_TYPE.SAME_ORIGIN;
+      } catch (e) {
+        it = this.CONSTANTS.IFRAME_TYPE.CROSS_ORIGIN;
+      }
+    }
+    return it;
+  },
 
-    const someUrl = buildUrl({
-      protocol: 'https',
-      host: 'pubads.g.doubleclick.net',
-      pathname: '/gampad/ads',
-      search: {}
-    });
+  intersectionObserverAvailable: function (win) {
+    // https://github.com/w3c/IntersectionObserver/blob/gh-pages/polyfill/intersection-observer.js#L23-L25
+    return (win &&
+            win.IntersectionObserver &&
+            win.IntersectionObserverEntry &&
+            win.IntersectionObserverEntry.prototype &&
+            'intersectionRatio' in win.IntersectionObserverEntry.prototype
+            ? true
+            : false);
+  },
+
+  buildAdUrl: function(searchParams) {
+    let adUrl = '';
+    try {
+      adUrl = buildUrl({
+        protocol: 'https',
+        host: this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX,
+        pathname: this.CONSTANTS.REQUEST_API_VERSION +
+          this.CONSTANTS.REQUEST_API_PATH_CREATIVE,
+        search: searchParams
+      });
+    } catch (err) {
+      // TODO: log warning
+    }
+    return adUrl;
   },
 
   /**
