@@ -1,5 +1,5 @@
 import * as utils from 'src/utils';
-import { format as buildUrl} from '../src/url';
+import { format as buildUrl, formatQS as buildSearchParams } from '../src/url';
 import { registerBidder } from 'src/adapters/bidderFactory';
 
 
@@ -21,10 +21,17 @@ export const YieldbotAdapter = {
    * @property {string} VERSION Yieldbot adapter version string: <pre>'pbjs-{major}.{minor}.{patch}'</pre>
    * @property {string} DEFAULT_BID_REQUEST_URL_PREFIX Request Url prefix to use when ad server response has not provided availability zone specific prefix
    * @property {string} REQUEST_API_VERSION Yieldbot request API Url path parameter
+   * @property {string} REQUEST_API_PATH_BID Yieldbot bid request API path component
+   * @property {string} REQUEST_API_PATH_CREATIVE Yieldbot ad markup request API path component
    * @property {number} USER_ID_TIMEOUT
    * @property {number} VISIT_ID_TIMEOUT
    * @property {number} SESSION_ID_TIMEOUT
-   * @property {string} REQUEST_PARAMS Request Url query parameter names
+   * @property {string} COOKIE_PREFIX Prefix string of first-party cookies set by Yieldbot
+   * @property {object} IFRAME_TYPE the iFrame type in which a ad markup request is made
+   * @property {string} IFRAME_TYPE.NONE not in an iFrame
+   * @property {string} IFRAME_TYPE.SAME_ORIGIN in an iFrame with the same origin aka "friendly"
+   * @property {string} IFRAME_TYPE.CROSS_ORIGIN in an iFrame with a different origin aka "unfriendly"
+   * @property {object} REQUEST_PARAMS Request Url query parameter names
    * @property {string} REQUEST_PARAMS.ADAPTER_VERSION The version of the YieldbotAdapter code. See [VERSION]{@link module:modules/YieldbotBidAdapter.CONSTANTS}.
    * @property {string} REQUEST_PARAMS.USER_ID First party user identifier
    * @property {string} REQUEST_PARAMS.SESSION_ID Publisher site visit session identifier
@@ -32,14 +39,17 @@ export const YieldbotAdapter = {
    * @property {string} REQUEST_PARAMS.AD_REQUEST_ID Yieldbot ad request identifier
    * @property {string} REQUEST_PARAMS.AD_REQUEST_SLOT Yieldbot ad markup request slot name <pre>&lt;slot name&gt;:&lt;width&gt;x&lt;height&gt;</pre>
    * @property {string} REQUEST_PARAMS.PAGEVIEW_DEPTH Counter for page visits in a session
+   * @property {string} [REQUEST_PARAMS.LAST_PAGEVIEW_ID] Pageview identifier for the last pageview within the session TTL
    * @property {string} REQUEST_PARAMS.BID_SLOT_NAME Yieldbot slot name to request bid for
    * @property {string} REQUEST_PARAMS.BID_SLOT_SIZE Dimensions for the respective bid slot name
    * @property {string} REQUEST_PARAMS.LOCATION The page visit location Url
+   * @property {string} REQUEST_PARAMS.REFERRER The referring page Url
    * @property {string} REQUEST_PARAMS.SCREEN_DIMENSIONS User-agent screen dimensions
    * @property {string} REQUEST_PARAMS.TIMEZONE_OFFSET Number of hours offset from UTC
    * @property {string} REQUEST_PARAMS.LANGUAGE Language and locale of the user-agent
    * @property {string} REQUEST_PARAMS.NAVIGATION_PLATFORM User-agent browsing platform
    * @property {string} REQUEST_PARAMS.USER_AGENT User-Agent string
+   * @property {string} [REQUEST_PARAMS.LAST_PAGEVIEW_TIME] Time in milliseconds since the last page visit
    * @property {string} REQUEST_PARAMS.NAVIGATION_START_TIME Performance timing navigationStart
    * @property {string} REQUEST_PARAMS.ADAPTER_LOADED_TIME Adapter code interpreting started timestamp, in milliseconds since the UNIX epoch
    * @property {string} REQUEST_PARAMS.BID_REQUEST_TIME Yieldbot bid request sent timestamp, in milliseconds since the UNIX epoch
@@ -47,17 +57,21 @@ export const YieldbotAdapter = {
    * @property {string} REQUEST_PARAMS.AD_REQUEST_TIME Yieldbot ad creative request sent timestamp, in milliseconds since the UNIX epoch
    * @property {string} REQUEST_PARAMS.AD_RENDER_TIME Yieldbot ad creative render started timestamp, in milliseconds since the UNIX epoch
    * @property {string} REQUEST_PARAMS.AD_IMPRESSION_TIME Yieldbot ad impression rerquest sent  timestamp, in milliseconds since the UNIX epoch
-   * @property {string} REQUEST_PARAMS.END_REQUEST_PARAMS Yieldbot request query parameters termination character
-   * @property {string} REQUEST_PARAMS.SESSION_BLOCKED Yieldbot ads blocked by user opt-out or suspicious activity detected during session
-   * @property {string} [REQUEST_PARAMS.BID_TYPE] Yieldbot bid request type: initial or refresh
-   * @property {string} [REQUEST_PARAMS.LAST_PAGEVIEW_ID] Last Yieldbot page visit identifier
-   * @property {string} [REQUEST_PARAMS.LAST_PAGEVIEW_TIME] Time in milliseconds since the last page visit
-   * @property {string} [REQUEST_PARAMS.REFERRER] URI of the page that linked to respective page visit location and identifier
    * @property {string} [REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] Indicator that the user-agent supports the Intersection Observer API
    * @property {string} [REQUEST_PARAMS.IFRAME_TYPE] Indicator to specify Yieldbot creative rendering occured in a same (<code>so</code>) or cross (<code>co</code>) origin iFrame
+   * @property {string} [REQUEST_PARAMS.BID_TYPE] Yieldbot bid request type: initial or refresh
+   * @property {string} REQUEST_PARAMS.SESSION_BLOCKED Yieldbot ads blocked by user opt-out or suspicious activity detected during session
    * @property {string} [REQUEST_PARAMS.ADAPTER_ERROR] Yieldbot error description parameter
+   * @property {string} REQUEST_PARAMS.TERMINATOR Yieldbot request query parameters termination character
+   * @property {object} COOKIES Cookie name suffixes set by Yieldbot. See also <code>CONSTANTS.COOKIE_PREFIX</code>
+   * @property {string} COOKIES.SESSION_BLOCKED The user session is blocked for bids
+   * @property {string} COOKIES.SESSION_ID The user session identifier
+   * @property {string} COOKIES.PAGEVIEW_DEPTH The session pageview depth
+   * @property {string} COOKIES.USER_ID The Yieldbot first-party user identifier
+   * @property {string} COOKIES.LAST_PAGEVIEW_ID The last pageview identifier within the session TTL
+   * @property {string} COOKIES.PREVIOUS_VISIT The time in [ms] since the last visit within the session TTL
    * @private
-   * @TODO optional properties
+   * @TODO Document parameter optionality for properties
    */
   CONSTANTS: {
     VERSION: 'pbjs-1.0.0',
@@ -65,9 +79,9 @@ export const YieldbotAdapter = {
     REQUEST_API_VERSION: '/v1',
     REQUEST_API_PATH_BID: '/init',
     REQUEST_API_PATH_CREATIVE: '/creative.js',
-    SESSION_ID_TIMEOUT: 180000,
     USER_ID_TIMEOUT: 2592000000,
     VISIT_ID_TIMEOUT: 2592000000,
+    SESSION_ID_TIMEOUT: 180000,
     COOKIE_PREFIX: '__ybot',
     IFRAME_TYPE: {
       NONE: 'none',
@@ -93,18 +107,18 @@ export const YieldbotAdapter = {
       NAVIGATOR_PLATFORM: 'np',
       USER_AGENT: 'ua',
       LAST_PAGEVIEW_TIME: 'lpv',
-      NAVIGATION_START: 'cts_ns',
+      NAVIGATION_START_TIME: 'cts_ns',
       ADAPTER_LOADED_TIME: 'cts_js',
       BID_REQUEST_TIME: 'cts_ini',
       BID_RESPONSE_TIME: 'cts_res',
       AD_REQUEST_TIME: 'cts_ad',
       AD_RENDER_TIME: 'cts_rend',
       AD_IMPRESSION_TIME: 'cts_imp',
-      ADAPTER_ERROR: 'apie',
       INTERSECTION_OBSERVER_AVAILABLE: 'ioa',
       IFRAME_TYPE: 'it',
-      SESSION_BLOCKED: 'sb',
       BID_TYPE: 'bt',
+      SESSION_BLOCKED: 'sb',
+      ADAPTER_ERROR: 'apie',
       TERMINATOR: 'e'
     },
     COOKIES: {
@@ -485,7 +499,7 @@ export const YieldbotAdapter = {
     const params = {};
 
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_LOADED_TIME] = this._adapterLoaded;
-    params[this.CONSTANTS.REQUEST_PARAMS.NAVIGATION_START] = this._navigationStart;
+    params[this.CONSTANTS.REQUEST_PARAMS.NAVIGATION_START_TIME] = this._navigationStart;
     params[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now(); // reset in buildRequests
 
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
@@ -535,14 +549,12 @@ export const YieldbotAdapter = {
    * @property {string} sn slot names
    * @property {string} szz slot sizes
    * @memberof module:modules/YieldbotBidAdapter
-   * @private
    *
   /**
    * Gets unique slot name and sizes for query parameters object
    * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server
    * @returns {YielcotBidSlots} publisher identifier and slots to bid on
    * @memberof module:modules/YieldbotBidAdapter
-   * @private
    */
   _getUniqueSlotSizes: function(bidRequests) {
     const params = {};
