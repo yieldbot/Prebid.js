@@ -4,7 +4,7 @@ import { newBidder } from 'src/adapters/bidderFactory';
 import AdapterManager from 'src/adaptermanager';
 import * as utils from 'src/utils';
 
-describe.only('Yieldbot Adapter Unit Tests', function() {
+describe('Yieldbot Adapter Unit Tests', function() {
 
   describe('Adapter spec API', function() {
     it('code', function() {
@@ -355,6 +355,34 @@ describe.only('Yieldbot Adapter Unit Tests', function() {
       YieldbotAdapter.setCookie(cookieName, expectedSessionId, YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
       const sessionId = YieldbotAdapter.sessionId;
       expect(sessionId).to.equal(expectedSessionId);
+    });
+  });
+
+  describe.only('urlPrefix', function() {
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.URL_PREFIX;
+
+    afterEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+      expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
+    });
+
+    it('should set the default prefix if cookie does not exist', function() {
+      const urlPrefix = YieldbotAdapter.urlPrefix();
+      expect(urlPrefix).to.equal(YieldbotAdapter.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX);
+    });
+
+    it('should return prefix if cookie exists', function() {
+      YieldbotAdapter.setCookie(cookieName, 'somePrefixUrl', YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
+      const urlPrefix = YieldbotAdapter.urlPrefix();
+      expect(urlPrefix).to.equal('somePrefixUrl');
+    });
+
+    it('should reset prefix if default already set', function() {
+      const defaultUrlPrefix = YieldbotAdapter.urlPrefix();
+      expect(defaultUrlPrefix).to.equal(YieldbotAdapter.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX);
+
+      const urlPrefix = YieldbotAdapter.urlPrefix('somePrefixUrl');
+      expect(urlPrefix).to.equal('somePrefixUrl');
     });
   });
 

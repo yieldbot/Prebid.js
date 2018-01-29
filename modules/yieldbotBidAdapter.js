@@ -70,12 +70,13 @@ export const YieldbotAdapter = {
    * @property {string} COOKIES.USER_ID The Yieldbot first-party user identifier
    * @property {string} COOKIES.LAST_PAGEVIEW_ID The last pageview identifier within the session TTL
    * @property {string} COOKIES.PREVIOUS_VISIT The time in [ms] since the last visit within the session TTL
+   * @property {string} COOKIES.URL_PREFIX Geo/IP proximity request Url domain
    * @private
    * @TODO Document parameter optionality for properties
    */
   CONSTANTS: {
-    VERSION: 'pbjs-1.0.0',
-    DEFAULT_BID_REQUEST_URL_PREFIX: 'i.yldbt.com/m/',
+    VERSION: 'pbjs-yb-1.0.0',
+    DEFAULT_BID_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
     REQUEST_API_VERSION: '/v1',
     REQUEST_API_PATH_BID: '/init',
     REQUEST_API_PATH_CREATIVE: '/creative.js',
@@ -127,7 +128,8 @@ export const YieldbotAdapter = {
       PAGEVIEW_DEPTH: 'pvd',
       USER_ID: 'vi',
       LAST_PAGEVIEW_ID: 'lpvi',
-      PREVIOUS_VISIT: 'v'
+      PREVIOUS_VISIT: 'v',
+      URL_PREFIX: 'c'
     }
   },
 
@@ -215,6 +217,22 @@ export const YieldbotAdapter = {
     if (!cookieValue) {
       this.setCookie(cookieName, cookieValue, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     }
+    return cookieValue;
+  },
+
+  /**
+   * Get/set the request base url used to form bid and ad markup requests.
+   * @param {string} [prefix] the bidder request base url
+   * @memberof module:modules/YieldbotBidAdapter
+   * @private
+   */
+  urlPrefix: function(prefix) {
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.URL_PREFIX;
+    let cookieValue = prefix || this.getCookie(cookieName);
+    if (!cookieValue) {
+      cookieValue = this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX;
+    }
+    this.setCookie(cookieName, cookieValue, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     return cookieValue;
   },
 
@@ -399,7 +417,10 @@ export const YieldbotAdapter = {
         searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
         searchParams[this.CONSTANTS.REQUEST_PARAMS.TERMINATOR] = '';
 
-        const adUrl = this.buildAdUrl(searchParams);
+        const urlPrefix = 's';
+        const adUrl = `${sdf}`;
+
+
         const bidResponse = {
           requestId: bidRequest.bidRequests[0].bidId, // TODO: correlate bidId
           cpm: cpm,
@@ -629,7 +650,7 @@ export const YieldbotAdapter = {
       const item = cookies[idx].split('=');
       const itemName = item[0].replace(/^\s+|\s+$/g, '');
       if (itemName == name) {
-        value = item.length > 1 ? item[1].replace(/^\s+|\s+$/g, '') : null;
+        value = item.length > 1 ? decodeURIComponent(item[1].replace(/^\s+|\s+$/g, '')) : null;
         break;
       }
     }
