@@ -381,8 +381,11 @@ describe('Yieldbot Adapter Unit Tests', function() {
       const defaultUrlPrefix = YieldbotAdapter.urlPrefix();
       expect(defaultUrlPrefix).to.equal(YieldbotAdapter.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX);
 
-      const urlPrefix = YieldbotAdapter.urlPrefix('somePrefixUrl');
-      expect(urlPrefix).to.equal('somePrefixUrl');
+      let urlPrefix = YieldbotAdapter.urlPrefix('somePrefixUrl');
+      expect(urlPrefix, 'reset prefix').to.equal('somePrefixUrl');
+
+      urlPrefix = YieldbotAdapter.urlPrefix();
+      expect(urlPrefix, 'subsequent request').to.equal('somePrefixUrl');
     });
   });
 
