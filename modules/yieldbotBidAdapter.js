@@ -38,7 +38,7 @@ export const YieldbotAdapter = {
    * @property {string} REQUEST_PARAMS.SESSION_ID Publisher site visit session identifier
    * @property {string} REQUEST_PARAMS.PAGEVIEW_ID Page visit identifier
    * @property {string} REQUEST_PARAMS.AD_REQUEST_ID Yieldbot ad request identifier
-   * @property {string} REQUEST_PARAMS.AD_REQUEST_SLOT Yieldbot ad markup request slot name <pre>&lt;slot name&gt;:&lt;width&gt;x&lt;height&gt;</pre>
+   * @property {string} REQUEST_PARAMS.AD_REQUEST_SLOT Slot name for Yieldbot ad markup request e.g. <pre>&lt;slot name&gt;:&lt;width&gt;x&lt;height&gt;</pre>
    * @property {string} REQUEST_PARAMS.PAGEVIEW_DEPTH Counter for page visits in a session
    * @property {string} [REQUEST_PARAMS.LAST_PAGEVIEW_ID] Pageview identifier for the last pageview within the session TTL
    * @property {string} REQUEST_PARAMS.BID_SLOT_NAME Yieldbot slot name to request bid for
@@ -135,32 +135,33 @@ export const YieldbotAdapter = {
   },
 
   /**
-   * @typeDef {YieldbotBidState} YieldbotBidState
-   * @property {string} userId
-   * @property {string} sessionId
-   * @property {string} pageviewId
-   * @property {number} sessionDepth
+   * Bid mapping key to the Prebid internal bidRequestId<br>
+   * Format <code>{pageview id}:{slot name}:{width}x{height}</code>
+   * @typeDef {YieldbotBidRequestKey} YieldbotBidRequestKey
+   * @type {string}
+   * @example "jbgxsxqxyxvqm2oud7:leaderboard:728x90"
    * @memberof module:modules/YieldbotBidAdapter
    * @private
    */
 
   /**
    * Internal Yieldbot adapter bid and ad markup request state
-   * @property {Object.<string, module:modules/YieldbotBidAdapter.YieldbotBidState>} {*} the ad/bid identifier
+   * <br>
+   * When interpreting a server response, the associated requestId is lookeded up
+   * in this map when creating a {@link Bid} response object.
+   * @type {object}
+   * @property {Object.<module:modules/YieldbotBidAdapter.YieldbotBidRequestKey, string>} {*} Yieldbot bid to requestId mapping item
    * @memberof module:modules/YieldbotBidAdapter
    * @inner
    * @private
    * @example
-   {
-     "2b7e31676ce17": {
-       "userId": "jcfdub4tu6t0zags",
-       "sessionId": "jcfdub3vzykq8tjykx",
-       "pageviewId": "jbgxsxqxyxvqm2oud7",
-       "sessionDepth": 1
-     }
-   }
+   * {
+   *   "jbgxsxqxyxvqm2oud7:leaderboard:728x90": "2b7e31676ce17",
+   *   "jbgxsxqxyxvqm2oud7:medrec:300x250": "2b7e31676cd89",
+   *   "jcrvvd6eoileb8w8ko:medrec:300x250": "2b7e316788ca7"
+   * }
    */
-  bidRequestData: {},
+  _bidRequestParamMap: {},
 
   _pageviewDepth: 0,
   _isInitialized: false,
@@ -287,11 +288,11 @@ export const YieldbotAdapter = {
       const requestParams = this.buildBidRequestParams(bidRequests);
       requestParams.searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
 
-      const bidUrl = '' +
-              this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX +
+      const bidUrl = this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX +
               requestParams.psn +
               this.CONSTANTS.REQUEST_API_VERSION +
               this.CONSTANTS.REQUEST_API_PATH_BID;
+      //                 this.CONSTANTS.REQUEST_PARAMS_TERMINATOR;
 
       requests.push({
         method: 'GET',
@@ -359,21 +360,6 @@ export const YieldbotAdapter = {
    */
   interpretResponse: function(serverResponse, bidRequest) {
     /*
-     * medrec:300x250
-     * http://ads-adslocal.yldbt.com/m/1234/ad/creative.js?v=v2017-11-13%7Cc454d60&vi=jcrvox3iizqzlxc38k&si=jcrvtw8iy5f9xe8108&ri=jcrvvd59iqu2mgcfan&slot=medrec%3A300x250&pvi=jcrvvc97rt7z9ams6a&cts_res=1516726623753&cts_ad=1516726624080&ioa&it=so&e
-
-     v:       v2017-11-13|c454d60
-     vi:      jcrvox3iizqzlxc38k
-     si:      jcrvtw8iy5f9xe8108
-     ri:      jcrvvd59iqu2mgcfan
-     slot:    medrec:300x250
-     pvi:     jcrvvc97rt7z9ams6a
-     cts_res: 1516726623753
-     cts_ad:  1516726624080
-     ioa:
-     it:      so
-     e:
-
      *
      * leaderboard:728x90
      * http://ads-adslocal.yldbt.com/m/1234/ad/creative.js?v=v2017-11-13%7Cc454d60&vi=jcrvox3iizqzlxc38k&si=jcrvtw8iy5f9xe8108&ri=jcrvvd6eoileb8w8ko&slot=leaderboard%3A728x90&pvi=jcrvvc97rt7z9ams6a&cts_res=1516726623753&cts_ad=1516726624121&ioa&it=so&e
@@ -425,8 +411,15 @@ export const YieldbotAdapter = {
                 queryString +
                 this.CONSTANTS.REQUEST_PARAMS_TERMINATOR;
 
+        console.log('_bidRequestParamMap', this._bidRequestParamMap);
+        const paramKey = bidData[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] +
+                ':' +
+                bid.slot +
+                ':' +
+                bid.size || '';
+        const requestId = this._bidRequestParamMap[paramKey] || '';
         const bidResponse = {
-          requestId: bidRequest.bidRequests[0].bidId, // TODO: correlate bidId
+          requestId: requestId,
           cpm: cpm,
           width: width,
           height: height,
@@ -465,22 +458,6 @@ export const YieldbotAdapter = {
             'intersectionRatio' in win.IntersectionObserverEntry.prototype
             ? true
             : false);
-  },
-
-  buildAdUrl: function(searchParams) {
-    let adUrl = '';
-    try {
-      adUrl = buildUrl({
-        protocol: 'https',
-        host: this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX,
-        pathname: this.CONSTANTS.REQUEST_API_VERSION +
-          this.CONSTANTS.REQUEST_API_PATH_CREATIVE,
-        search: searchParams
-      });
-    } catch (err) {
-      // TODO: log warning
-    }
-    return adUrl;
   },
 
   /**
@@ -525,8 +502,6 @@ export const YieldbotAdapter = {
 
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_LOADED_TIME] = this._adapterLoaded;
     params[this.CONSTANTS.REQUEST_PARAMS.NAVIGATION_START_TIME] = this._navigationStart;
-    params[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now(); // reset in buildRequests
-
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
 
     const userId = this.userId;
@@ -538,16 +513,13 @@ export const YieldbotAdapter = {
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = pageviewId;
     /*
      * Yieldbot bidRequestData
-     {
-       "2b7e31676ce17": {
-         "userId": "jcfdub4tu6t0zags",
-         "sessionId": "jcfdub3vzykq8tjykx",
-         "pageviewId": "jbgxsxqxyxvqm2oud7",
-         "sessionDepth": 1
-       }
-     }
+    {
+     "{pvi}:leaderboard:728x90": "2b7e31676ce17",
+     "{pvi}:medrec:300x250": "1c7e31676c339",
+     "{pvi}:medrec:300x600": "1d8e31676d238"
+    }
      */
-    const slotSizesParams = this._getUniqueSlotSizes(bidRequests);
+    const slotSizesParams = this.getBidRequestParams(pageviewId, bidRequests);
     params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = slotSizesParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] || '';
     params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] = slotSizesParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] || '';
 
@@ -559,8 +531,6 @@ export const YieldbotAdapter = {
 
     params[this.CONSTANTS.REQUEST_PARAMS.LOCATION] = utils.getTopWindowUrl();
     params[this.CONSTANTS.REQUEST_PARAMS.REFERRER] = utils.getTopWindowReferrer();
-
-    params[this.CONSTANTS.REQUEST_PARAMS.TERMINATOR] = '';
 
     return {
       psn: slotSizesParams.psn || '',
@@ -591,6 +561,37 @@ export const YieldbotAdapter = {
         utils.parseSizesInput(bid.sizes).forEach(sz => {
           if (!slotBids[bid.params.slot].some(existingSize => existingSize === sz)) {
             slotBids[bid.params.slot].push(sz);
+          }
+        });
+      });
+
+      const nm = [];
+      const sz = [];
+      for (let idx in slotBids) {
+        const slotName = idx;
+        const slotSizes = slotBids[idx];
+        nm.push(slotName);
+        sz.push(slotSizes.join('.'));
+      }
+      params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = nm.join('|');
+      params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] = sz.join('|');
+    } catch (err) {}
+    return params;
+  },
+
+  getBidRequestParams: function(pageviewId, bidRequests) {
+    const params = {};
+    try {
+      const slotBids = {};
+      bidRequests.forEach((bid) => {
+        slotBids[bid.params.slot] = slotBids[bid.params.slot] || [];
+        params.psn = params.psn || bid.params.psn || '';
+        utils.parseSizesInput(bid.sizes).forEach(sz => {
+          const slotName = bid.params.slot;
+          if (!slotBids[slotName].some(existingSize => existingSize === sz)) {
+            slotBids[bid.params.slot].push(sz);
+            const paramKey = pageviewId + ':' + slotName + ':' + sz;
+            this._bidRequestParamMap[paramKey] = bid.bidId;
           }
         });
       });
