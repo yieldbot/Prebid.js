@@ -1,5 +1,5 @@
 import * as utils from 'src/utils';
-import { format as buildUrl, formatQS as buildSearchParams } from '../src/url';
+import { format as buildUrl, formatQS as buildQueryString } from '../src/url';
 import { registerBidder } from 'src/adapters/bidderFactory';
 
 
@@ -23,6 +23,7 @@ export const YieldbotAdapter = {
    * @property {string} REQUEST_API_VERSION Yieldbot request API Url path parameter
    * @property {string} REQUEST_API_PATH_BID Yieldbot bid request API path component
    * @property {string} REQUEST_API_PATH_CREATIVE Yieldbot ad markup request API path component
+   * @property {string} REQUEST_PARAMS_TERMINATOR Yieldbot request query parameters termination character
    * @property {number} USER_ID_TIMEOUT
    * @property {number} VISIT_ID_TIMEOUT
    * @property {number} SESSION_ID_TIMEOUT
@@ -62,7 +63,6 @@ export const YieldbotAdapter = {
    * @property {string} [REQUEST_PARAMS.BID_TYPE] Yieldbot bid request type: initial or refresh
    * @property {string} REQUEST_PARAMS.SESSION_BLOCKED Yieldbot ads blocked by user opt-out or suspicious activity detected during session
    * @property {string} [REQUEST_PARAMS.ADAPTER_ERROR] Yieldbot error description parameter
-   * @property {string} REQUEST_PARAMS.TERMINATOR Yieldbot request query parameters termination character
    * @property {object} COOKIES Cookie name suffixes set by Yieldbot. See also <code>CONSTANTS.COOKIE_PREFIX</code>
    * @property {string} COOKIES.SESSION_BLOCKED The user session is blocked for bids
    * @property {string} COOKIES.SESSION_ID The user session identifier
@@ -80,6 +80,7 @@ export const YieldbotAdapter = {
     REQUEST_API_VERSION: '/v1',
     REQUEST_API_PATH_BID: '/init',
     REQUEST_API_PATH_CREATIVE: '/creative.js',
+    REQUEST_PARAMS_TERMINATOR: '&e',
     USER_ID_TIMEOUT: 2592000000,
     VISIT_ID_TIMEOUT: 2592000000,
     SESSION_ID_TIMEOUT: 180000,
@@ -393,7 +394,7 @@ export const YieldbotAdapter = {
 
     const bidResponses = [];
     const responseBody = serverResponse && serverResponse.body ? serverResponse.body : {};
-    const slotBids = responseBody.slots || null;
+    const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : null;
     const optOut = responseBody.optout || false;
     if (!optOut && slotBids) {
 
@@ -415,11 +416,14 @@ export const YieldbotAdapter = {
         searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_SLOT] = `${bid.slot}:${bid.size || '1x1'}`;
         searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
         searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
-        searchParams[this.CONSTANTS.REQUEST_PARAMS.TERMINATOR] = '';
 
-        const urlPrefix = 's';
-        const adUrl = `${sdf}`;
-
+        const urlPrefix = responseBody.urlPrefix || this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX;
+        const queryString = buildQueryString(searchParams) || '';
+        const adUrl = urlPrefix +
+                this.CONSTANTS.REQUEST_API_VERSION.REQUEST_API_PATH_CREATIVE +
+                '?' +
+                queryString +
+                this.CONSTANTS.REQUEST_PARAMS_TERMINATOR;
 
         const bidResponse = {
           requestId: bidRequest.bidRequests[0].bidId, // TODO: correlate bidId
