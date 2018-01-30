@@ -53,7 +53,7 @@
                          bidder: 'yieldbot',
                          params: {
                              psn: '1234',
-                             slot: 'sidebar'
+                             slot: 'medrec'
                          }
                      }
                  ]
@@ -74,6 +74,18 @@
              };
 
              pbjs.addAdUnits([adUnit0, adUnit1, adUnit2]);
+             const customGranularity = {
+                 'buckets': [{
+                     'min': 3,
+                     'max': 10,
+                     'increment': 1
+                 }]
+             };
+
+             pbjs.setConfig({
+                 priceGranularity: customGranularity,
+                 enableSendAllBids: true
+             })
              pbjs.requestBids({
                  bidsBackHandler: sendAdserverRequest
              });

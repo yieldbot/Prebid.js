@@ -79,7 +79,7 @@ export const YieldbotAdapter = {
     DEFAULT_BID_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
     REQUEST_API_VERSION: '/v1',
     REQUEST_API_PATH_BID: '/init',
-    REQUEST_API_PATH_CREATIVE: '/creative.js',
+    REQUEST_API_PATH_CREATIVE: '/ad/creative.js',
     REQUEST_PARAMS_TERMINATOR: '&e',
     USER_ID_TIMEOUT: 2592000000,
     VISIT_ID_TIMEOUT: 2592000000,
@@ -285,20 +285,26 @@ export const YieldbotAdapter = {
   buildRequests: function(bidRequests, bidderRequest) {
     const requests = [];
     if (!this._optOut) {
-      const requestParams = this.buildBidRequestParams(bidRequests);
-      requestParams.searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
+      const searchParams = this.initBidRequestParams(bidRequests);
+      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
+
+      const pageviewId = searchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID];
+      const yieldbotSlotParams = this.getSlotRequestParams(pageviewId, bidRequests);
+      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] || '';
+      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] = yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] || '';
+
+
 
       const bidUrl = this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX +
-              requestParams.psn +
+              yieldbotSlotParams.psn +
               this.CONSTANTS.REQUEST_API_VERSION +
               this.CONSTANTS.REQUEST_API_PATH_BID;
-      //                 this.CONSTANTS.REQUEST_PARAMS_TERMINATOR;
 
       requests.push({
         method: 'GET',
         url: bidUrl,
-        data: requestParams.searchParams,
-        bidRequests: bidRequests,
+        data: searchParams,
+        yieldbotSlotParams: yieldbotSlotParams,
         options: {
           withCredentials: true,
           customHeaders: {
@@ -374,7 +380,6 @@ export const YieldbotAdapter = {
      ioa:
      it:      so
      e:
-
      *
      */
 
@@ -385,7 +390,7 @@ export const YieldbotAdapter = {
     if (!optOut && slotBids) {
 
       const bidData = {};
-      bidData[this.CONSTANTS.REQUEST_PARAMS.VERSION] = this.CONSTANTS.VERSION;
+      bidData[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
       bidData[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequest.data.vi || this.CONSTANTS.VERSION + '-vi';
       bidData[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequest.data.si || this.CONSTANTS.VERSION + '-si';
       bidData[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequest.data.pvi || this.CONSTANTS.VERSION + '-pvi';
@@ -394,7 +399,7 @@ export const YieldbotAdapter = {
         const sizeParts = bid.size ? bid.size.split('x') : [1, 1];
         const width = sizeParts[0] || 1;
         const height = sizeParts[1] || 1;
-        const cpm = bid.cpm || '0';
+        const cpm = parseInt(bid.cpm, 10) / 100.0 || 0;
 
         const searchParams = Object.assign({}, bidData);
 
@@ -403,21 +408,24 @@ export const YieldbotAdapter = {
         searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
         searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
 
-        const urlPrefix = responseBody.urlPrefix || this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX;
+        const urlPrefix = responseBody.url_prefix || this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX;
         const queryString = buildQueryString(searchParams) || '';
+        const yieldbotSlotParams = bidRequest.yieldbotSlotParams || null;
+        const publisherNumber = yieldbotSlotParams ? yieldbotSlotParams.psn || '' : '';
         const adUrl = urlPrefix +
-                this.CONSTANTS.REQUEST_API_VERSION.REQUEST_API_PATH_CREATIVE +
+                publisherNumber +
+                this.CONSTANTS.REQUEST_API_PATH_CREATIVE +
                 '?' +
                 queryString +
                 this.CONSTANTS.REQUEST_PARAMS_TERMINATOR;
 
-        console.log('_bidRequestParamMap', this._bidRequestParamMap);
         const paramKey = bidData[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] +
                 ':' +
                 bid.slot +
                 ':' +
                 bid.size || '';
-        const requestId = this._bidRequestParamMap[paramKey] || '';
+        const bidIdMap = yieldbotSlotParams && yieldbotSlotParams.bidIdMap ? bidRequest.yieldbotSlotParams.bidIdMap : {};
+        const requestId = bidIdMap[paramKey] || '';
         const bidResponse = {
           requestId: requestId,
           cpm: cpm,
@@ -476,7 +484,7 @@ export const YieldbotAdapter = {
    * @memberof module:modules/YieldbotBidAdapter
    * @private
    */
-  buildBidRequestParams: function(bidRequests) {
+  initBidRequestParams: function(bidRequests) {
     /*
      v=v2017-11-13%7Cc454d60
      vi=jb40ztc9qjst7opy
@@ -511,31 +519,19 @@ export const YieldbotAdapter = {
     params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = sessionId;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH] = this._pageviewDepth + 1;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = pageviewId;
-    /*
-     * Yieldbot bidRequestData
-    {
-     "{pvi}:leaderboard:728x90": "2b7e31676ce17",
-     "{pvi}:medrec:300x250": "1c7e31676c339",
-     "{pvi}:medrec:300x600": "1d8e31676d238"
-    }
-     */
-    const slotSizesParams = this.getBidRequestParams(pageviewId, bidRequests);
-    params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = slotSizesParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] || '';
-    params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] = slotSizesParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] || '';
 
     params[this.CONSTANTS.REQUEST_PARAMS.USER_AGENT] = navigator.userAgent;
     params[this.CONSTANTS.REQUEST_PARAMS.NAVIGATOR_PLATFORM] = navigator.platform;
     params[this.CONSTANTS.REQUEST_PARAMS.LANGUAGE] = navigator.browserLanguage ? navigator.browserLanguage : navigator.language;
     params[this.CONSTANTS.REQUEST_PARAMS.TIMEZONE_OFFSET] = (new Date()).getTimezoneOffset() / 60;
-    params[this.CONSTANTS.REQUEST_PARAMS.SCREEN_DIMENSIONS] = `${window.screen.width}x${window.screen.height}`;
+    params[this.CONSTANTS.REQUEST_PARAMS.SCREEN_DIMENSIONS] = window.screen.width + 'x' + window.screen.height;
 
     params[this.CONSTANTS.REQUEST_PARAMS.LOCATION] = utils.getTopWindowUrl();
     params[this.CONSTANTS.REQUEST_PARAMS.REFERRER] = utils.getTopWindowReferrer();
 
-    return {
-      psn: slotSizesParams.psn || '',
-      searchParams: params
-    };
+    params[this.CONSTANTS.REQUEST_PARAMS_TERMINATOR] = '';
+
+    return params;
   },
 
   /**
@@ -543,6 +539,7 @@ export const YieldbotAdapter = {
    * @property {string} psn Yieldbot publisher site identifier taken from bidder params
    * @property {string} sn slot names
    * @property {string} szz slot sizes
+   * @property {object} bidIdMap Yieldbot bid to Prebid bidId mapping
    * @memberof module:modules/YieldbotBidAdapter
    *
   /**
@@ -551,36 +548,9 @@ export const YieldbotAdapter = {
    * @returns {YielcotBidSlots} publisher identifier and slots to bid on
    * @memberof module:modules/YieldbotBidAdapter
    */
-  _getUniqueSlotSizes: function(bidRequests) {
+  getSlotRequestParams: function(pageviewId, bidRequests) {
     const params = {};
-    try {
-      const slotBids = {};
-      bidRequests.forEach((bid) => {
-        slotBids[bid.params.slot] = slotBids[bid.params.slot] || [];
-        params.psn = params.psn || bid.params.psn || '';
-        utils.parseSizesInput(bid.sizes).forEach(sz => {
-          if (!slotBids[bid.params.slot].some(existingSize => existingSize === sz)) {
-            slotBids[bid.params.slot].push(sz);
-          }
-        });
-      });
-
-      const nm = [];
-      const sz = [];
-      for (let idx in slotBids) {
-        const slotName = idx;
-        const slotSizes = slotBids[idx];
-        nm.push(slotName);
-        sz.push(slotSizes.join('.'));
-      }
-      params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = nm.join('|');
-      params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] = sz.join('|');
-    } catch (err) {}
-    return params;
-  },
-
-  getBidRequestParams: function(pageviewId, bidRequests) {
-    const params = {};
+    const bidIdMap = {};
     try {
       const slotBids = {};
       bidRequests.forEach((bid) => {
@@ -592,6 +562,7 @@ export const YieldbotAdapter = {
             slotBids[bid.params.slot].push(sz);
             const paramKey = pageviewId + ':' + slotName + ':' + sz;
             this._bidRequestParamMap[paramKey] = bid.bidId;
+            bidIdMap[paramKey] = bid.bidId;
           }
         });
       });
@@ -606,47 +577,12 @@ export const YieldbotAdapter = {
       }
       params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = nm.join('|');
       params[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] = sz.join('|');
+
+      params.bidIdMap = bidIdMap;
     } catch (err) {}
     return params;
   },
 
-  /**
-   * Builds the Yieldbot creative tag html.
-   *
-   * @param {String} slot Slot name
-   * @param {String} size Dimensions of the slot
-   * @memberof module:modules/YieldbotBidAdapter
-   * @private
-   */
-  buildCreative: function (slot, size) {
-    // http://ads-adseast-vpc.yldbt.com/m/1234/ad/creative.js?
-    // v=v2017-11-13%7Cc454d60&
-    // vi=jb40ztc9qjst7opy&
-    // si=jbgxsxqyssuisp5wi6&
-    // ri=jbgxsyrlx9fxnr1hbl&
-    // slot=medrec%3A300x250&
-    // pvi=jbgxsxqxyxvqm2oud7&
-    // cts_res=1513887960749&
-    // cts_ad=1513887961090&
-    // ioa&
-    // it=so&
-    // e
-
-    // https://ads-adslocal.yldbt.com/m/bfec/ad/impression.gif
-    // v:v2017-11-13|c454d60
-    // vi:jbdtnyx1fot1e25buv
-    // si:jbwykoijzma0cyxitf
-    // pvi:jbwyn7zpmvaf8nmt99
-    // ri:jbwyn85fe0izcf5as9
-    // cts_rend:1514856831994
-    // cts_imp:1514856832018
-    // e:
-    return '<script type="text/javascript" src="//cdn.yldbt.com/js/yieldbot.intent.js"></script>' +
-      '<script type="text/javascript">var ybotq = ybotq || [];' +
-      'ybotq.push(function () {yieldbot.renderAd(\'' + slot + ':' + size + '\');});</script>';
-  },
-
-  hasLocalStorage: function() { return true; },
   cookiesEnabled: function() { return true; },
   getCookie: function(name) {
     const cookies = document.cookie.split(';');
