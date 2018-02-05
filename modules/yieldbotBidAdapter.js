@@ -641,7 +641,8 @@ export const spec = {
   supportedMediaTypes: YieldbotAdapter.supportedMediaTypes,
   isBidRequestValid: YieldbotAdapter.createDelegate(YieldbotAdapter, YieldbotAdapter.isBidRequestValid),
   buildRequests: YieldbotAdapter.createDelegate(YieldbotAdapter, YieldbotAdapter.buildRequests),
-  interpretResponse: YieldbotAdapter.createDelegate(YieldbotAdapter, YieldbotAdapter.interpretResponse)
+  interpretResponse: YieldbotAdapter.createDelegate(YieldbotAdapter, YieldbotAdapter.interpretResponse),
+  getUserSyncs: YieldbotAdapter.createDelegate(YieldbotAdapter, YieldbotAdapter.getUserSyncs)
 };
 
 YieldbotAdapter._navigationStart = Date.now();
