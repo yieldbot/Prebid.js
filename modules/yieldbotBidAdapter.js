@@ -1,7 +1,6 @@
 import * as utils from 'src/utils';
-import { format as buildUrl, formatQS as buildQueryString } from '../src/url';
+import { formatQS as buildQueryString } from '../src/url';
 import { registerBidder } from 'src/adapters/bidderFactory';
-
 
 /**
  * @module {BidderSpec} modules/YieldbotBidAdapter
@@ -61,6 +60,7 @@ export const YieldbotAdapter = {
    * @property {string} [REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] Indicator that the user-agent supports the Intersection Observer API
    * @property {string} [REQUEST_PARAMS.IFRAME_TYPE] Indicator to specify Yieldbot creative rendering occured in a same (<code>so</code>) or cross (<code>co</code>) origin iFrame
    * @property {string} [REQUEST_PARAMS.BID_TYPE] Yieldbot bid request type: initial or refresh
+   * @property {string} REQUEST_PARAMS.CALLBACK Ad creative render callback
    * @property {string} REQUEST_PARAMS.SESSION_BLOCKED Yieldbot ads blocked by user opt-out or suspicious activity detected during session
    * @property {string} [REQUEST_PARAMS.ADAPTER_ERROR] Yieldbot error description parameter
    * @property {object} COOKIES Cookie name suffixes set by Yieldbot. See also <code>CONSTANTS.COOKIE_PREFIX</code>
@@ -119,6 +119,8 @@ export const YieldbotAdapter = {
       INTERSECTION_OBSERVER_AVAILABLE: 'ioa',
       IFRAME_TYPE: 'it',
       BID_TYPE: 'bt',
+      CALLBACK: 'cb',
+      MEDIA_TYPE: 'mtp',
       SESSION_BLOCKED: 'sb',
       ADAPTER_ERROR: 'apie',
       TERMINATOR: 'e'
@@ -289,11 +291,14 @@ export const YieldbotAdapter = {
       searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
 
       const pageviewId = searchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID];
+
       const yieldbotSlotParams = this.getSlotRequestParams(pageviewId, bidRequests);
-      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] = yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] || '';
-      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] = yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] || '';
 
+      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] =
+        yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] || '';
 
+      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] =
+        yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] || '';
 
       const bidUrl = this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX +
               yieldbotSlotParams.psn +
@@ -328,21 +333,11 @@ export const YieldbotAdapter = {
    */
   getUserSyncs: function(syncOptions, serverResponses) {
     const userSyncs = [];
-
     /*
      {
        "user_syncs": [
          "https://idsync.rlcdn.com/456839.gif?partner_uid=vjcfdub3vzykq8tjykx"
        ]
-     }
-     */
-
-    /** @TODO formalize user sync iframe html src
-     if (syncOptions.iframeEnabled) {
-     userSyncs.push({
-     type: 'iframe',
-     url: '//cdn.yldbt.com/js/yb_usersync.html'
-     });
      }
      */
     if (syncOptions.pixelEnabled && serverResponses.length > 0 && utils.isArray(serverResponses[0].body.user_syncs)) {
@@ -388,9 +383,9 @@ export const YieldbotAdapter = {
     const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : null;
     const optOut = responseBody.optout || false;
     if (!optOut && slotBids) {
-
       const bidData = {};
       bidData[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
+      // bidData[this.CONSTANTS.REQUEST_PARAMS.MEDIA_TYPE] = 'json';
       bidData[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequest.data.vi || this.CONSTANTS.VERSION + '-vi';
       bidData[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequest.data.si || this.CONSTANTS.VERSION + '-si';
       bidData[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequest.data.pvi || this.CONSTANTS.VERSION + '-pvi';
@@ -404,6 +399,7 @@ export const YieldbotAdapter = {
         const searchParams = Object.assign({}, bidData);
 
         searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = this.newId();
+        searchParams[this.CONSTANTS.REQUEST_PARAMS.CALLBACK] = 'ybotCb' + this.newId();
         searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_SLOT] = `${bid.slot}:${bid.size || '1x1'}`;
         searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
         searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
@@ -435,7 +431,7 @@ export const YieldbotAdapter = {
           currency: 'USD',
           netRevenue: true,
           ttl: this.CONSTANTS.SESSION_ID_TIMEOUT / 1000, // [s]
-          adUrl: adUrl
+          ad: '<div>' + adUrl + '</div>'
         };
         bidResponses.push(bidResponse);
       });
@@ -448,8 +444,8 @@ export const YieldbotAdapter = {
     while (win !== window.top) {
       try {
         win = win.parent;
-        const tmp = win.document;
-        it = this.CONSTANTS.IFRAME_TYPE.SAME_ORIGIN;
+        const doc = win.document;
+        it = doc ? this.CONSTANTS.IFRAME_TYPE.SAME_ORIGIN : this.CONSTANTS.IFRAME_TYPE.CROSS_ORIGIN;
       } catch (e) {
         it = this.CONSTANTS.IFRAME_TYPE.CROSS_ORIGIN;
       }
@@ -459,13 +455,11 @@ export const YieldbotAdapter = {
 
   intersectionObserverAvailable: function (win) {
     // https://github.com/w3c/IntersectionObserver/blob/gh-pages/polyfill/intersection-observer.js#L23-L25
-    return (win &&
-            win.IntersectionObserver &&
-            win.IntersectionObserverEntry &&
-            win.IntersectionObserverEntry.prototype &&
-            'intersectionRatio' in win.IntersectionObserverEntry.prototype
-            ? true
-            : false);
+    return win &&
+      win.IntersectionObserver &&
+      win.IntersectionObserverEntry &&
+      win.IntersectionObserverEntry.prototype &&
+      'intersectionRatio' in win.IntersectionObserverEntry.prototype;
   },
 
   /**
@@ -545,12 +539,14 @@ export const YieldbotAdapter = {
   /**
    * Gets unique slot name and sizes for query parameters object
    * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server
-   * @returns {YielcotBidSlots} publisher identifier and slots to bid on
+   * @returns {YieldbotBidSlots} publisher identifier and slots to bid on
    * @memberof module:modules/YieldbotBidAdapter
    */
   getSlotRequestParams: function(pageviewId, bidRequests) {
     const params = {};
     const bidIdMap = {};
+    bidRequests = bidRequests || [];
+    pageviewId = pageviewId || '';
     try {
       const slotBids = {};
       bidRequests.forEach((bid) => {
