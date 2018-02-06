@@ -80,6 +80,7 @@ export const YieldbotAdapter = {
     REQUEST_API_VERSION: '/v1',
     REQUEST_API_PATH_BID: '/init',
     REQUEST_API_PATH_CREATIVE: '/ad/creative.js',
+    REQUEST_API_PATH_IMPRESSION: '/ad/impression.gif',
     REQUEST_PARAMS_TERMINATOR: '&e',
     USER_ID_TIMEOUT: 2592000000,
     VISIT_ID_TIMEOUT: 2592000000,
@@ -383,45 +384,22 @@ export const YieldbotAdapter = {
     const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : null;
     const optOut = responseBody.optout || false;
     if (!optOut && slotBids) {
-      const bidData = {};
-      bidData[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
-      // bidData[this.CONSTANTS.REQUEST_PARAMS.MEDIA_TYPE] = 'json';
-      bidData[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequest.data.vi || this.CONSTANTS.VERSION + '-vi';
-      bidData[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequest.data.si || this.CONSTANTS.VERSION + '-si';
-      bidData[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequest.data.pvi || this.CONSTANTS.VERSION + '-pvi';
-
       slotBids.forEach((bid) => {
         const sizeParts = bid.size ? bid.size.split('x') : [1, 1];
         const width = sizeParts[0] || 1;
         const height = sizeParts[1] || 1;
         const cpm = parseInt(bid.cpm, 10) / 100.0 || 0;
 
-        const searchParams = Object.assign({}, bidData);
-        const ybotRequestId = this.newId();
-        searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = ybotRequestId;
-        searchParams[this.CONSTANTS.REQUEST_PARAMS.CALLBACK] = 'ybotCb' + ybotRequestId;
-        searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_SLOT] = `${bid.slot}:${bid.size || '1x1'}`;
-        searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
-        searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
-
-        const urlPrefix = responseBody.url_prefix || this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX;
-        const queryString = buildQueryString(searchParams) || '';
         const yieldbotSlotParams = bidRequest.yieldbotSlotParams || null;
-        const publisherNumber = yieldbotSlotParams ? yieldbotSlotParams.psn || '' : '';
-        const adUrl = urlPrefix +
-                publisherNumber +
-                this.CONSTANTS.REQUEST_API_PATH_CREATIVE +
-                '?' +
-                queryString +
-                this.CONSTANTS.REQUEST_PARAMS_TERMINATOR;
-
-        const paramKey = bidData[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] +
+        const paramKey = bidRequest.data[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] +
                 ':' +
                 bid.slot +
                 ':' +
                 bid.size || '';
         const bidIdMap = yieldbotSlotParams && yieldbotSlotParams.bidIdMap ? yieldbotSlotParams.bidIdMap : {};
         const requestId = bidIdMap[paramKey] || '';
+
+        const urlPrefix = responseBody.url_prefix || this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX;
         const bidResponse = {
           requestId: requestId,
           cpm: cpm,
@@ -431,7 +409,7 @@ export const YieldbotAdapter = {
           currency: 'USD',
           netRevenue: true,
           ttl: this.CONSTANTS.SESSION_ID_TIMEOUT / 1000, // [s]
-          ad: this.buildAdCreativeTag(ybotRequestId, adUrl)
+          ad: this.buildAdCreativeTag(urlPrefix, bid, bidRequest)
         };
         bidResponses.push(bidResponse);
       });
@@ -439,7 +417,37 @@ export const YieldbotAdapter = {
     return bidResponses;
   },
 
-  buildAdCreativeTag: function(ybotRequestId, adUrl) {
+  buildAdUrl: function(urlPrefix, publisherNumber, adRequestId, bid, bidRequestData) {
+    const searchParams = {};
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequestData.vi || this.CONSTANTS.VERSION + '-vi';
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequestData.si || this.CONSTANTS.VERSION + '-si';
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequestData.pvi || this.CONSTANTS.VERSION + '-pvi';
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = adRequestId;
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_SLOT] = bid.slot + ':' + bid.size;
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
+
+    const queryString = buildQueryString(searchParams) || '';
+    const adUrl =urlPrefix +
+            publisherNumber +
+            this.CONSTANTS.REQUEST_API_PATH_CREATIVE +
+            '?' +
+            queryString +
+            this.CONSTANTS.REQUEST_PARAMS_TERMINATOR;
+    return adUrl;
+
+  },
+  buildImpressionUrl: function(urlPrefix, publisherNumber, bidRequestData) {
+    return '';
+  },
+  buildAdCreativeTag: function(urlPrefix, bid, bidRequest) {
+
+    const ybotRequestId = this.newId();
+    const publisherNumber = bidRequest && bidRequest.yieldbotSlotParams ? bidRequest.yieldbotSlotParams.psn || '' : '';
+    const adUrl = this.buildAdUrl(urlPrefix, publisherNumber, ybotRequestId, bid, bidRequest.data);
+    const impressionUrl = this.buildImpressionUrl(urlPrefix, bid, bidRequest.data);
+
     let htmlMarkup = `<div id=ybot-${ybotRequestId}></div>
 <script type="text/javascript">
 var yieldbot = {};
@@ -479,7 +487,13 @@ yieldbot["_render"] = function(data) {
   } catch(err) {}
 };
 </script>
-<script src="${adUrl}"></script>`;
+<script src="${adUrl}"></script>
+<script type="text/javascript">
+   var image = new Image(1, 1);
+   image.onload = function () {};
+   image.src = ${impressionUrl};
+</script>
+`;
     return htmlMarkup;
   },
   iframeType: function (win) {
