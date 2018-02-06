@@ -456,13 +456,20 @@ yieldbot["_render"] = function(data) {
     var containerEl = document.getElementById(data.wrapper_id || 'ybot-' + data.request_id);
     containerEl.appendChild(divEl);
 
-    var iframeHtml = '<!DOCTYPE html><head><meta charset=utf-8><style>' + data.style + '</style></head><body>' + data.html + '</body>',
-    innerFrame;
+    var iframeHtml = '<!DOCTYPE html><head><meta charset=utf-8><style>' +
+       data.style +
+       '</style></head><body>' +
+       data.html +
+       '</body>',
     innerFrame = document.createElement('iframe');
-    innerFrame.frameBorder = '0';
     innerFrame.width = width;
     innerFrame.height = height;
     innerFrame.scrolling = 'no';
+    innerFrame.marginWidth = '0';
+    innerFrame.marginHeight = '0';
+    innerFrame.frameBorder = '0';
+    innerFrame.style.border = '0px';
+    innerFrame.style['vertical-align'] = 'bottom';
     innerFrame.id = 'ybot-' + data.request_id + '-iframe';
     divEl.appendChild(innerFrame);
     var innerFrameDoc = innerFrame.contentWindow.document;
