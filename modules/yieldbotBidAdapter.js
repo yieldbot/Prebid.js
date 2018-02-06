@@ -397,9 +397,9 @@ export const YieldbotAdapter = {
         const cpm = parseInt(bid.cpm, 10) / 100.0 || 0;
 
         const searchParams = Object.assign({}, bidData);
-
-        searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = this.newId();
-        searchParams[this.CONSTANTS.REQUEST_PARAMS.CALLBACK] = 'ybotCb' + this.newId();
+        const ybotRequestId = this.newId();
+        searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = ybotRequestId;
+        searchParams[this.CONSTANTS.REQUEST_PARAMS.CALLBACK] = 'ybotCb' + ybotRequestId;
         searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_SLOT] = `${bid.slot}:${bid.size || '1x1'}`;
         searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
         searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
@@ -420,7 +420,7 @@ export const YieldbotAdapter = {
                 bid.slot +
                 ':' +
                 bid.size || '';
-        const bidIdMap = yieldbotSlotParams && yieldbotSlotParams.bidIdMap ? bidRequest.yieldbotSlotParams.bidIdMap : {};
+        const bidIdMap = yieldbotSlotParams && yieldbotSlotParams.bidIdMap ? yieldbotSlotParams.bidIdMap : {};
         const requestId = bidIdMap[paramKey] || '';
         const bidResponse = {
           requestId: requestId,
@@ -431,7 +431,7 @@ export const YieldbotAdapter = {
           currency: 'USD',
           netRevenue: true,
           ttl: this.CONSTANTS.SESSION_ID_TIMEOUT / 1000, // [s]
-          ad: '<div>' + adUrl + '</div>'
+          ad: this.buildAdCreativeTag(ybotRequestId, adUrl)
         };
         bidResponses.push(bidResponse);
       });
@@ -439,6 +439,42 @@ export const YieldbotAdapter = {
     return bidResponses;
   },
 
+  buildAdCreativeTag: function(ybotRequestId, adUrl) {
+    let htmlMarkup = `<div id=ybot-${ybotRequestId}></div>
+<script type="text/javascript">
+var yieldbot = {};
+yieldbot["_render"] = function(data) {
+  try {
+    var bodyHtml = data.html,
+    width = data.size[0] || 0,
+    height = data.size[1] || 0,
+    divEl = document.createElement('div');
+    divEl.style.width = width + 'px';
+    divEl.style.height = height + 'px';
+    divEl.className = 'ybot-creative creative-wrapper';
+
+    var containerEl = document.getElementById(data.wrapper_id || 'ybot-' + data.request_id);
+    containerEl.appendChild(divEl);
+
+    var iframeHtml = '<!DOCTYPE html><head><meta charset=utf-8><style>' + data.style + '</style></head><body>' + data.html + '</body>',
+    innerFrame;
+    innerFrame = document.createElement('iframe');
+    innerFrame.frameBorder = '0';
+    innerFrame.width = width;
+    innerFrame.height = height;
+    innerFrame.scrolling = 'no';
+    innerFrame.id = 'ybot-' + data.request_id + '-iframe';
+    divEl.appendChild(innerFrame);
+    var innerFrameDoc = innerFrame.contentWindow.document;
+    innerFrameDoc.open();
+    innerFrameDoc.write(iframeHtml);
+    innerFrameDoc.close();
+  } catch(err) {}
+};
+</script>
+<script src="${adUrl}"></script>`;
+    return htmlMarkup;
+  },
   iframeType: function (win) {
     let it = this.CONSTANTS.IFRAME_TYPE.NONE;
     while (win !== window.top) {
@@ -516,9 +552,12 @@ export const YieldbotAdapter = {
 
     params[this.CONSTANTS.REQUEST_PARAMS.USER_AGENT] = navigator.userAgent;
     params[this.CONSTANTS.REQUEST_PARAMS.NAVIGATOR_PLATFORM] = navigator.platform;
-    params[this.CONSTANTS.REQUEST_PARAMS.LANGUAGE] = navigator.browserLanguage ? navigator.browserLanguage : navigator.language;
-    params[this.CONSTANTS.REQUEST_PARAMS.TIMEZONE_OFFSET] = (new Date()).getTimezoneOffset() / 60;
-    params[this.CONSTANTS.REQUEST_PARAMS.SCREEN_DIMENSIONS] = window.screen.width + 'x' + window.screen.height;
+    params[this.CONSTANTS.REQUEST_PARAMS.LANGUAGE] =
+      navigator.browserLanguage ? navigator.browserLanguage : navigator.language;
+    params[this.CONSTANTS.REQUEST_PARAMS.TIMEZONE_OFFSET] =
+      (new Date()).getTimezoneOffset() / 60;
+    params[this.CONSTANTS.REQUEST_PARAMS.SCREEN_DIMENSIONS] =
+      window.screen.width + 'x' + window.screen.height;
 
     params[this.CONSTANTS.REQUEST_PARAMS.LOCATION] = utils.getTopWindowUrl();
     params[this.CONSTANTS.REQUEST_PARAMS.REFERRER] = utils.getTopWindowReferrer();
