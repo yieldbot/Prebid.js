@@ -417,19 +417,14 @@ export const YieldbotAdapter = {
     return bidResponses;
   },
 
-  buildAdUrl: function(urlPrefix, publisherNumber, adRequestId, bid, bidRequestData) {
-    const searchParams = {};
-    searchParams[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
-    searchParams[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequestData.vi || this.CONSTANTS.VERSION + '-vi';
-    searchParams[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequestData.si || this.CONSTANTS.VERSION + '-si';
-    searchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequestData.pvi || this.CONSTANTS.VERSION + '-pvi';
-    searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = adRequestId;
+  buildAdUrl: function(urlPrefix, publisherNumber, commonSearchParams, bid) {
+    const searchParams = Object.assign({}, commonSearchParams);
     searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_SLOT] = bid.slot + ':' + bid.size;
     searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
     searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
 
     const queryString = buildQueryString(searchParams) || '';
-    const adUrl =urlPrefix +
+    const adUrl = urlPrefix +
             publisherNumber +
             this.CONSTANTS.REQUEST_API_PATH_CREATIVE +
             '?' +
@@ -438,17 +433,31 @@ export const YieldbotAdapter = {
     return adUrl;
 
   },
-  buildImpressionUrl: function(urlPrefix, publisherNumber, bidRequestData) {
-    return '';
+  buildImpressionUrl: function(urlPrefix, publisherNumber, commonSearchParams, bidRequestData) {
+    const searchParams = Object.assign({}, commonSearchParams);
+    const queryString = buildQueryString(searchParams) || '';
+    const impressionUrl = urlPrefix +
+            publisherNumber +
+            this.CONSTANTS.REQUEST_API_PATH_IMPRESSION +
+            '?' +
+            queryString;
+
+    return impressionUrl;
   },
   buildAdCreativeTag: function(urlPrefix, bid, bidRequest) {
+    const ybotAdRequestId = this.newId();
+    const commonSearchParams = {};
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequest.data.vi || this.CONSTANTS.VERSION + '-vi';
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequest.data.si || this.CONSTANTS.VERSION + '-si';
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequest.data.pvi || this.CONSTANTS.VERSION + '-pvi';
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = ybotAdRequestId;
 
-    const ybotRequestId = this.newId();
     const publisherNumber = bidRequest && bidRequest.yieldbotSlotParams ? bidRequest.yieldbotSlotParams.psn || '' : '';
-    const adUrl = this.buildAdUrl(urlPrefix, publisherNumber, ybotRequestId, bid, bidRequest.data);
-    const impressionUrl = this.buildImpressionUrl(urlPrefix, bid, bidRequest.data);
+    const adUrl = this.buildAdUrl(urlPrefix, publisherNumber, commonSearchParams, bid);
+    const impressionUrl = this.buildImpressionUrl(urlPrefix, publisherNumber, commonSearchParams);
 
-    let htmlMarkup = `<div id=ybot-${ybotRequestId}></div>
+    let htmlMarkup = `<div id=ybot-${ybotAdRequestId}></div>
 <script type="text/javascript">
 var yieldbot = {};
 yieldbot["_render"] = function(data) {
@@ -481,6 +490,7 @@ yieldbot["_render"] = function(data) {
     innerFrame.id = 'ybot-' + data.request_id + '-iframe';
     divEl.appendChild(innerFrame);
     var innerFrameDoc = innerFrame.contentWindow.document;
+    yieldbot['cts_rend' + "${ybotAdRequestId}"] = Date.now();
     innerFrameDoc.open();
     innerFrameDoc.write(iframeHtml);
     innerFrameDoc.close();
@@ -491,7 +501,8 @@ yieldbot["_render"] = function(data) {
 <script type="text/javascript">
    var image = new Image(1, 1);
    image.onload = function () {};
-   image.src = ${impressionUrl};
+   var cts_rend = yieldbot['cts_rend' + "${ybotAdRequestId}"] || 0;
+   image.src = "${impressionUrl}" + "&cts_rend=" + cts_rend + "&e";
 </script>
 `;
     return htmlMarkup;
