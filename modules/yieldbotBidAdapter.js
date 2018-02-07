@@ -460,21 +460,21 @@ export const YieldbotAdapter = {
 <script type="text/javascript">
   var yieldbot = {
     iframeType: function (win) {
-      var it = "none";
+      var it = 'none';
       while (win !== window.top) {
         try {
           win = win.parent;
           var doc = win.document;
-          it = doc ? "so" : "co";
+          it = doc ? 'so' : 'co';
         } catch (e) {
-          it = "co";
+          it = 'co';
         }
       }
       return it;
     },
-    "_render": function(data) {
+    '_render': function(data) {
       try {
-        yieldbot['cts_rend_' + "${ybotAdRequestId}"] = Date.now();
+        yieldbot['cts_rend_' + '${ybotAdRequestId}'] = Date.now();
         var bodyHtml = data.html,
         width = data.size[0] || 0,
         height = data.size[1] || 0,
@@ -509,15 +509,15 @@ export const YieldbotAdapter = {
 
         var image = new Image(1, 1);
         image.onload = function () {};
-        var cts_rend = yieldbot['cts_rend_' + "${ybotAdRequestId}"] || 0;
-        image.src = "${impressionUrl}" + "&cts_imp=" + Date.now() + "&cts_rend=" + cts_rend + "&e";
+        var cts_rend = yieldbot['cts_rend_' + '${ybotAdRequestId}'] || 0;
+        image.src = '${impressionUrl}' + '&cts_imp=' + Date.now() + '&cts_rend=' + cts_rend + '&e';
       } catch(err) {}
     }
   };
 </script>
 <script type="text/javascript">
   var jsEl = document.createElement('script');
-  var src = "${adUrl}" + "&it=" + yieldbot.iframeType(window) + "&cts_ad=" + Date.now() + "&e";
+  var src = '${adUrl}' + '&it=' + yieldbot.iframeType(window) + '&cts_ad=' + Date.now() + '&e';
   jsEl.src = src;
   var firstEl = document.getElementsByTagName('script')[0];
   firstEl.parentNode.insertBefore(jsEl, firstEl);
