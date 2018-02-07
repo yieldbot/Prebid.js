@@ -18,7 +18,7 @@ export const YieldbotAdapter = {
    * @constant
    * @memberof module:modules/YieldbotBidAdapter
    * @property {string} VERSION Yieldbot adapter version string: <pre>'pbjs-{major}.{minor}.{patch}'</pre>
-   * @property {string} DEFAULT_BID_REQUEST_URL_PREFIX Request Url prefix to use when ad server response has not provided availability zone specific prefix
+   * @property {string} DEFAULT_REQUEST_URL_PREFIX Request Url prefix to use when ad server response has not provided availability zone specific prefix
    * @property {string} REQUEST_API_VERSION Yieldbot request API Url path parameter
    * @property {string} REQUEST_API_PATH_BID Yieldbot bid request API path component
    * @property {string} REQUEST_API_PATH_CREATIVE Yieldbot ad markup request API path component
@@ -76,7 +76,7 @@ export const YieldbotAdapter = {
    */
   CONSTANTS: {
     VERSION: 'pbjs-yb-1.0.0',
-    DEFAULT_BID_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
+    DEFAULT_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
     REQUEST_API_VERSION: '/v1',
     REQUEST_API_PATH_BID: '/init',
     REQUEST_API_PATH_CREATIVE: '/ad/creative.js',
@@ -235,7 +235,7 @@ export const YieldbotAdapter = {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.URL_PREFIX;
     let cookieValue = prefix || this.getCookie(cookieName);
     if (!cookieValue) {
-      cookieValue = this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX;
+      cookieValue = this.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX;
     }
     this.setCookie(cookieName, cookieValue, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     return cookieValue;
@@ -301,7 +301,7 @@ export const YieldbotAdapter = {
       searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] =
         yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] || '';
 
-      const bidUrl = this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX +
+      const bidUrl = this.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX +
               yieldbotSlotParams.psn +
               this.CONSTANTS.REQUEST_API_VERSION +
               this.CONSTANTS.REQUEST_API_PATH_BID;
@@ -399,7 +399,7 @@ export const YieldbotAdapter = {
         const bidIdMap = yieldbotSlotParams && yieldbotSlotParams.bidIdMap ? yieldbotSlotParams.bidIdMap : {};
         const requestId = bidIdMap[paramKey] || '';
 
-        const urlPrefix = responseBody.url_prefix || this.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX;
+        const urlPrefix = responseBody.url_prefix || this.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX;
         const bidResponse = {
           requestId: requestId,
           cpm: cpm,
@@ -419,8 +419,8 @@ export const YieldbotAdapter = {
 
   buildAdUrl: function(urlPrefix, publisherNumber, commonSearchParams, bid) {
     const searchParams = Object.assign({}, commonSearchParams);
+    searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_RESPONSE_TIME] = Date.now();
     searchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_SLOT] = bid.slot + ':' + bid.size;
-    searchParams[this.CONSTANTS.REQUEST_PARAMS.IFRAME_TYPE] = this.iframeType(window);
     searchParams[this.CONSTANTS.REQUEST_PARAMS.INTERSECTION_OBSERVER_AVAILABLE] = this.intersectionObserverAvailable(window);
 
     const queryString = buildQueryString(searchParams) || '';
@@ -428,8 +428,7 @@ export const YieldbotAdapter = {
             publisherNumber +
             this.CONSTANTS.REQUEST_API_PATH_CREATIVE +
             '?' +
-            queryString +
-            this.CONSTANTS.REQUEST_PARAMS_TERMINATOR;
+            queryString;
     return adUrl;
 
   },
@@ -459,52 +458,70 @@ export const YieldbotAdapter = {
 
     let htmlMarkup = `<div id=ybot-${ybotAdRequestId}></div>
 <script type="text/javascript">
-var yieldbot = {};
-yieldbot["_render"] = function(data) {
-  try {
-    var bodyHtml = data.html,
-    width = data.size[0] || 0,
-    height = data.size[1] || 0,
-    divEl = document.createElement('div');
-    divEl.style.width = width + 'px';
-    divEl.style.height = height + 'px';
-    divEl.className = 'ybot-creative creative-wrapper';
+  var yieldbot = {
+    iframeType: function (win) {
+      var it = "none";
+      while (win !== window.top) {
+        try {
+          win = win.parent;
+          var doc = win.document;
+          it = doc ? "so" : "co";
+        } catch (e) {
+          it = "co";
+        }
+      }
+      return it;
+    },
+    "_render": function(data) {
+      try {
+        yieldbot['cts_rend_' + "${ybotAdRequestId}"] = Date.now();
+        var bodyHtml = data.html,
+        width = data.size[0] || 0,
+        height = data.size[1] || 0,
+        divEl = document.createElement('div');
+        divEl.style.width = width + 'px';
+        divEl.style.height = height + 'px';
+        divEl.className = 'ybot-creative creative-wrapper';
 
-    var containerEl = document.getElementById(data.wrapper_id || 'ybot-' + data.request_id);
-    containerEl.appendChild(divEl);
+        var containerEl = document.getElementById(data.wrapper_id || 'ybot-' + data.request_id);
+        containerEl.appendChild(divEl);
 
-    var iframeHtml = '<!DOCTYPE html><head><meta charset=utf-8><style>' +
-       data.style +
-       '</style></head><body>' +
-       data.html +
-       '</body>',
-    innerFrame = document.createElement('iframe');
-    innerFrame.width = width;
-    innerFrame.height = height;
-    innerFrame.scrolling = 'no';
-    innerFrame.marginWidth = '0';
-    innerFrame.marginHeight = '0';
-    innerFrame.frameBorder = '0';
-    innerFrame.style.border = '0px';
-    innerFrame.style['vertical-align'] = 'bottom';
-    innerFrame.id = 'ybot-' + data.request_id + '-iframe';
-    divEl.appendChild(innerFrame);
-    var innerFrameDoc = innerFrame.contentWindow.document;
-    yieldbot['cts_rend' + "${ybotAdRequestId}"] = Date.now();
-    innerFrameDoc.open();
-    innerFrameDoc.write(iframeHtml);
-    innerFrameDoc.close();
-  } catch(err) {}
-};
+        var iframeHtml = '<!DOCTYPE html><head><meta charset=utf-8><style>' +
+           data.style +
+           '</style></head><body>' +
+           data.html +
+           '</body>',
+        innerFrame = document.createElement('iframe');
+        innerFrame.width = width;
+        innerFrame.height = height;
+        innerFrame.scrolling = 'no';
+        innerFrame.marginWidth = '0';
+        innerFrame.marginHeight = '0';
+        innerFrame.frameBorder = '0';
+        innerFrame.style.border = '0px';
+        innerFrame.style['vertical-align'] = 'bottom';
+        innerFrame.id = 'ybot-' + data.request_id + '-iframe';
+        divEl.appendChild(innerFrame);
+        var innerFrameDoc = innerFrame.contentWindow.document;
+        innerFrameDoc.open();
+        innerFrameDoc.write(iframeHtml);
+        innerFrameDoc.close();
+
+        var image = new Image(1, 1);
+        image.onload = function () {};
+        var cts_rend = yieldbot['cts_rend_' + "${ybotAdRequestId}"] || 0;
+        image.src = "${impressionUrl}" + "&cts_imp=" + Date.now() + "&cts_rend=" + cts_rend + "&e";
+      } catch(err) {}
+    }
+  };
 </script>
-<script src="${adUrl}"></script>
 <script type="text/javascript">
-   var image = new Image(1, 1);
-   image.onload = function () {};
-   var cts_rend = yieldbot['cts_rend' + "${ybotAdRequestId}"] || 0;
-   image.src = "${impressionUrl}" + "&cts_rend=" + cts_rend + "&e";
-</script>
-`;
+  var jsEl = document.createElement('script');
+  var src = "${adUrl}" + "&it=" + yieldbot.iframeType(window) + "&cts_ad=" + Date.now() + "&e";
+  jsEl.src = src;
+  var firstEl = document.getElementsByTagName('script')[0];
+  firstEl.parentNode.insertBefore(jsEl, firstEl);
+</script>`;
     return htmlMarkup;
   },
   iframeType: function (win) {
