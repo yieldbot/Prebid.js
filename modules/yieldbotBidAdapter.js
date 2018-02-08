@@ -266,11 +266,10 @@ export const YieldbotAdapter = {
    * Make a server request from the list of BidRequests.
    *
    * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server.
-   * @param {object} bidderRequest request containing bids ()valid or otherwise) and bidder specific info
    * @return ServerRequest Info describing the request to the server.
    * @memberof module:modules/YieldbotBidAdapter
    */
-  buildRequests: function(bidRequests, bidderRequest) {
+  buildRequests: function(bidRequests) {
     const requests = [];
     if (!this._optOut) {
       const searchParams = this.initBidRequestParams();
@@ -340,9 +339,9 @@ export const YieldbotAdapter = {
   interpretResponse: function(serverResponse, bidRequest) {
     const bidResponses = [];
     const responseBody = serverResponse && serverResponse.body ? serverResponse.body : {};
-    const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : null;
-    const optOut = responseBody.optout || false;
-    if (!optOut && slotBids) {
+    this._optOut = responseBody.optout || false;
+    if (!this.optOut) {
+      const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : [];
       slotBids.forEach((bid) => {
         const sizeParts = bid.size ? bid.size.split('x') : [1, 1];
         const width = sizeParts[0] || 1;

@@ -5,6 +5,68 @@ import AdapterManager from 'src/adaptermanager';
 import * as utils from 'src/utils';
 
 describe('Yieldbot Adapter Unit Tests', function() {
+  let _adUnits, _bidRequests;
+  beforeEach(function() {
+    _adUnits = [
+      {
+        transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c19',
+        code: '/00000000/leaderboard',
+        sizes: [728, 90],
+        bids: [
+          {
+            bidder: 'yieldbot',
+            params: {
+              psn: '1234',
+              slot: 'leaderboard'
+            }
+          }
+        ]
+      },
+      {
+        transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c20',
+        code: '/00000000/medrec',
+        sizes: [[300, 250]],
+        bids: [
+          {
+            bidder: 'yieldbot',
+            params: {
+              psn: '1234',
+              slot: 'medrec'
+            }
+          }
+        ]
+      },
+      {
+        transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
+        code: '/00000000/multi-size',
+        sizes: [[300,600]],
+        bids: [
+          {
+            bidder: 'yieldbot',
+            params: {
+              psn: '1234',
+              slot: 'sidebar'
+            }
+          }
+        ]
+      },
+      {
+        transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c22',
+        code: '/00000000/skyscraper',
+        sizes: [[160, 600]],
+        bids: [
+          {
+            bidder: 'yieldbot',
+            params: {
+              psn: '1234',
+              slot: 'skyscraper'
+            }
+          }
+        ]
+      }
+    ];
+    _bidRequests = AdapterManager.makeBidRequests(_adUnits, Date.now(), 1234567890, 1000);
+  });
   describe('Adapter spec API', function() {
     it('code', function() {
       expect(spec.code).to.equal('yieldbot');
@@ -454,6 +516,20 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('buildRequests', function() {
+    it('should not return bid requests if optOut', function() {
+      YieldbotAdapter._optOut = true;
+
+      const requests = YieldbotAdapter.buildRequests(_bidRequests);
+      expect(requests.length).to.equal(0);
+    });
+    it('sd', function() {});
+    it('sd', function() {});
+    it('sd', function() {});
+    it('sd', function() {});
+
+  });
+
+  describe.skip('TODO: functional buildRequests', function() {
     let sandbox, server, xhr, requests;
     beforeEach(function() {
       sandbox = sinon.sandbox.create();
@@ -471,69 +547,34 @@ describe('Yieldbot Adapter Unit Tests', function() {
       sandbox.restore();
     });
 
-    let bidRequests = [
-      {
-        'bidder': 'appnexus',
-        'params': {
-          'placementId': '10433394'
+    const serverResponse = {
+      pvi: 'jdeqc5bigwlu083v48',
+      subdomain_iframe: 'ads-adseast-vpc',
+      url_prefix: 'http://ads-adseast-vpc.yldbt.com/m/',
+      integration_test: true,
+      slots: [
+        {
+          slot: 'leaderboard',
+          cpm: '800',
+          size: '728x90'
         },
-        'adUnitCode': 'adunit-code',
-        'sizes': [[300, 250], [300, 600]],
-        'bidId': '30b31c1838de1e',
-        'bidderRequestId': '22edbae2733bf6',
-        'auctionId': '1d1a030790a475'
-      },
-      {
-        'bidder': 'appnexus',
-        'params': {
-          'plac ementId': '10433394'
+        {
+          slot: 'medrec',
+          cpm: '300',
+          size: '300x250'
         },
-        'adUnitCode': 'adunit-code2',
-        'sizes': [],
-        'bidId': '30b31c1838de1e',
-        'bidderRequestId': '22edbae2733bf6',
-        'auctionId': '1d1a030790a475'
-      }
-    ];
-
-    const adUnits = [
-      {
-        code: '/19968336/header-bid-tag-0',
-        sizes: [
-          [
-            300,
-            250
-          ],
-          [
-            300,
-            600
-          ]
-        ],
-        bids: [
-          {
-            bidder: 'yieldbot',
-            params: {
-              psn: '1234',
-              slot: 'medrec'
-            },
-            placementCode: '/19968336/header-bid-tag-0',
-            sizes: [
-              [
-                300,
-                250
-              ],
-              [
-                300,
-                600
-              ]
-            ],
-            bidId: '154f9cbf82df565',
-            bidderRequestId: '1448569c2453b84',
-            auctionId: '1ff753bd4ae5cb'
-          }
-        ]
-      }
-    ];
+        {
+          slot: 'sidebar',
+          cpm: '800',
+          size: '300x600'
+        },
+        {
+          slot: 'skyscraper',
+          cpm: '300',
+          size: '160x600'
+        }
+      ]
+    };
 
     it('should provide bidRequests for interpretResponse', function() {
 
@@ -541,16 +582,16 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
     it('should do something', function() {
       AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
-      const bidRequests = AdapterManager.makeBidRequests(adUnits, Date.now(), 1234567890, 1000);
 
+      console.log('bidRequests', _bidRequests);
       server.respondWith(
         [
           200,
           { 'Content-Type': 'application/json' },
-          '[{ \'id\': 12, \'comment\': \'Hey there\' }]'
+          JSON.stringify(serverResponse)
         ]
       );
-      AdapterManager.callBids(adUnits, bidRequests, () => {
+      AdapterManager.callBids(_adUnits, _bidRequests, () => {
         console.log('addBidResponse', arguments);
       }, () => {
         console.log('doneCb', arguments);
@@ -560,23 +601,23 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
     it('should do something else', function(done) {
       AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
-      const bidRequests = AdapterManager.makeBidRequests(adUnits, Date.now(), 1234567890, 1000);
 
-      AdapterManager.callBids(adUnits, bidRequests, () => {}, () => {
+      const ret = AdapterManager.callBids(_adUnits, _bidRequests, () => {}, () => {
         return () => {
           console.log('done', requests);
-          done();
         };
       });
 
       requests[0].respond(
         200,
         { 'Content-Type': 'application/json' },
-        '[{ \'id\': 12, \'comment\': \'Hey there\' }]');
+        JSON.stringify(serverResponse));
+
+      done();
     });
   });
 
-  describe.skip('interpretResponse', () => {
+  describe.skip('TODO: functional interpretResponse', () => {
     const ybotResponse = {
       pvi: 'jbgxsxqxyxvqm2oud7',
       subdomain_iframe: 'ads-adseast-vpc',
