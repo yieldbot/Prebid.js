@@ -409,7 +409,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('initBidRequestParams', function() {
-    it('should build bid request state parameters', function() {
+    it('should build common bid request state parameters', function() {
       const params = YieldbotAdapter.initBidRequestParams(
         [
           {
@@ -423,28 +423,27 @@ describe('Yieldbot Adapter Unit Tests', function() {
       );
 
       const expectedParamKeys = [
-        'v',
-        'vi',
-        'si',
-        'pvi',
-        'pvd',
-        'lpvi',
-        'lo',
-        'r',
-        'sd',
-        'to',
-        'la',
-        'np',
-        'ua',
-        'lpv',
-        'cts_ns',
-        'cts_js',
-        'cts_ini',
-        'e'
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.USER_ID,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.SESSION_ID,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_TYPE,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.LAST_PAGEVIEW_ID,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.LOCATION,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.REFERRER,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.SCREEN_DIMENSIONS,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.TIMEZONE_OFFSET,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.LANGUAGE,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.NAVIGATOR_PLATFORM,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.USER_AGENT,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.LAST_PAGEVIEW_TIME,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.NAVIGATION_START_TIME,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.ADAPTER_LOADED_TIME,
+        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.TERMINATOR
       ];
 
       const missingKeys = [];
-
       expectedParamKeys.forEach((item) => {
         if (item in params === false) {
           missingKeys.push(item);

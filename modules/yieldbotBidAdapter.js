@@ -10,7 +10,6 @@ import { registerBidder } from 'src/adapters/bidderFactory';
  * @private
  */
 export const YieldbotAdapter = {
-  _cookiesEnabled: !utils.isSafariBrowser() && utils.cookiesAreEnabled(),
   _adapterLoaded: Date.now(),
   _navigationStart: 0,
   /**
@@ -136,37 +135,10 @@ export const YieldbotAdapter = {
       URL_PREFIX: 'c'
     }
   },
-
-  /**
-   * Bid mapping key to the Prebid internal bidRequestId<br>
-   * Format <code>{pageview id}:{slot name}:{width}x{height}</code>
-   * @typeDef {YieldbotBidRequestKey} YieldbotBidRequestKey
-   * @type {string}
-   * @example "jbgxsxqxyxvqm2oud7:leaderboard:728x90"
-   * @memberof module:modules/YieldbotBidAdapter
-   * @private
-   */
-
-  /**
-   * Internal Yieldbot adapter bid and ad markup request state
-   * <br>
-   * When interpreting a server response, the associated requestId is lookeded up
-   * in this map when creating a {@link Bid} response object.
-   * @type {object}
-   * @property {Object.<module:modules/YieldbotBidAdapter.YieldbotBidRequestKey, string>} {*} Yieldbot bid to requestId mapping item
-   * @memberof module:modules/YieldbotBidAdapter
-   * @inner
-   * @private
-   * @example
-   * {
-   *   "jbgxsxqxyxvqm2oud7:leaderboard:728x90": "2b7e31676ce17",
-   *   "jbgxsxqxyxvqm2oud7:medrec:300x250": "2b7e31676cd89",
-   *   "jcrvvd6eoileb8w8ko:medrec:300x250": "2b7e316788ca7"
-   * }
-   */
-
+  _bidRequestCount: 0,
   _pageviewDepth: 0,
   _isInitialized: false,
+
   initialize: function() {
     if (!this._isInitialized) {
       this._pageviewDepth = this.pageviewDepth;
@@ -301,12 +273,12 @@ export const YieldbotAdapter = {
   buildRequests: function(bidRequests, bidderRequest) {
     const requests = [];
     if (!this._optOut) {
-      const searchParams = this.initBidRequestParams(bidRequests);
-      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
+      const searchParams = this.initBidRequestParams();
+      this._bidRequestCount++;
 
-      const pageviewId = searchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID];
+      const pageviewIdToMap = searchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID];
 
-      const yieldbotSlotParams = this.getSlotRequestParams(pageviewId, bidRequests);
+      const yieldbotSlotParams = this.getSlotRequestParams(pageviewIdToMap, bidRequests);
 
       searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] =
         yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME] || '';
@@ -319,6 +291,7 @@ export const YieldbotAdapter = {
               this.CONSTANTS.REQUEST_API_VERSION +
               this.CONSTANTS.REQUEST_API_PATH_BID;
 
+      searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_REQUEST_TIME] = Date.now();
       requests.push({
         method: 'GET',
         url: bidUrl,
@@ -332,8 +305,6 @@ export const YieldbotAdapter = {
         }
       });
     }
-
-    console.log('requests', requests);
     return requests;
   },
 
@@ -367,24 +338,6 @@ export const YieldbotAdapter = {
    * @memberof module:modules/YieldbotBidAdapter
    */
   interpretResponse: function(serverResponse, bidRequest) {
-    /*
-     *
-     * leaderboard:728x90
-     * http://ads-adslocal.yldbt.com/m/1234/ad/creative.js?v=v2017-11-13%7Cc454d60&vi=jcrvox3iizqzlxc38k&si=jcrvtw8iy5f9xe8108&ri=jcrvvd6eoileb8w8ko&slot=leaderboard%3A728x90&pvi=jcrvvc97rt7z9ams6a&cts_res=1516726623753&cts_ad=1516726624121&ioa&it=so&e
-     v:       v2017-11-13|c454d60
-     vi:      jcrvox3iizqzlxc38k
-     si:      jcrvtw8iy5f9xe8108
-     ri:      jcrvvd6eoileb8w8ko
-     slot:    leaderboard:728x90
-     pvi:     jcrvvc97rt7z9ams6a
-     cts_res: 1516726623753
-     cts_ad:  1516726624121
-     ioa:
-     it:      so
-     e:
-     *
-     */
-
     const bidResponses = [];
     const responseBody = serverResponse && serverResponse.body ? serverResponse.body : {};
     const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : null;
@@ -545,7 +498,9 @@ export const YieldbotAdapter = {
   },
 
   intersectionObserverAvailable: function (win) {
-    // https://github.com/w3c/IntersectionObserver/blob/gh-pages/polyfill/intersection-observer.js#L23-L25
+    /* Ref:
+     * https://github.com/w3c/IntersectionObserver/blob/gh-pages/polyfill/intersection-observer.js#L23-L25
+     */
     return win &&
       win.IntersectionObserver &&
       win.IntersectionObserverEntry &&
@@ -563,34 +518,15 @@ export const YieldbotAdapter = {
    * @private
    */
   /**
-   * Builds the Yieldbot bid request Url query parameters
+   * Builds the common Yieldbot bid request Url query parameters.<br>
+   * Slot bid related parameters are handled separately. The so-called common parameters
+   * here are request identifiers, page properties and user-agent attributes.
    * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server
    * @returns {YieldbotBidParams} query parameter key/value object
    * @memberof module:modules/YieldbotBidAdapter
    * @private
    */
-  initBidRequestParams: function(bidRequests) {
-    /*
-     v=v2017-11-13%7Cc454d60
-     vi=jb40ztc9qjst7opy
-     si=jbgxsxqyssuisp5wi6
-     pvi=jbgxsxqxyxvqm2oud7
-     pvd=1
-     sn=medrec%7Cleaderboard
-     ssz=300x250.300x600%7C728x90
-     lo=http%3A//localhost%3A8084/pubfood/examples/provider/bid/yieldbot/yieldbot-ex1.html
-     r=
-     sd=2560x1440
-     to=5
-     la=en-US
-     np=MacIntel
-     ua=Mozilla/5.0%20%28Macintosh%3B%20Intel%20Mac%20OS%20X%2010_12_6%29%20AppleWebKit/537.36%20%28KHTML%2C%20like%20Gecko%29%20Chrome/63.0.3239.108%20Safari/537.36
-     lpv=3666894
-     cts_ns=1513887959303
-     cts_js=1513887959761
-     cts_ini=1513887959774
-     e
-     */
+  initBidRequestParams: function() {
     const params = {};
 
     params[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_LOADED_TIME] = this._adapterLoaded;
@@ -604,6 +540,7 @@ export const YieldbotAdapter = {
     params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = sessionId;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH] = this._pageviewDepth;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = pageviewId;
+    params[this.CONSTANTS.REQUEST_PARAMS.BID_TYPE] = this._bidRequestCount === 0 ? 'init' : 'refresh';
 
     params[this.CONSTANTS.REQUEST_PARAMS.USER_AGENT] = navigator.userAgent;
     params[this.CONSTANTS.REQUEST_PARAMS.NAVIGATOR_PLATFORM] = navigator.platform;
@@ -623,11 +560,38 @@ export const YieldbotAdapter = {
   },
 
   /**
+   * Bid mapping key to the Prebid internal bidRequestId<br>
+   * Format <code>{pageview id}:{slot name}:{width}x{height}</code>
+   * @typeDef {YieldbotBidRequestKey} YieldbotBidRequestKey
+   * @type {string}
+   * @example "jbgxsxqxyxvqm2oud7:leaderboard:728x90"
+   * @memberof module:modules/YieldbotBidAdapter
+   * @private
+   */
+  /**
+   * Internal Yieldbot adapter bid and ad markup request state
+   * <br>
+   * When interpreting a server response, the associated requestId is lookeded up
+   * in this map when creating a {@link Bid} response object.
+   * @typeDef {BidRequestMapping}
+   * @type {object}
+   * @property {Object.<module:modules/YieldbotBidAdapter.YieldbotBidRequestKey, string>} {*} Yieldbot bid to requestId mapping item
+   * @memberof module:modules/YieldbotBidAdapter
+   * @inner
+   * @private
+   * @example
+   * {
+   *   "jbgxsxqxyxvqm2oud7:leaderboard:728x90": "2b7e31676ce17",
+   *   "jbgxsxqxyxvqm2oud7:medrec:300x250": "2b7e31676cd89",
+   *   "jcrvvd6eoileb8w8ko:medrec:300x250": "2b7e316788ca7"
+   * }
+   */
+  /**
    * @typeDef {YieldbotBidSlots} YieldbotBidSlots
    * @property {string} psn Yieldbot publisher site identifier taken from bidder params
    * @property {string} sn slot names
    * @property {string} szz slot sizes
-   * @property {object} bidIdMap Yieldbot bid to Prebid bidId mapping
+   * @property {BidRequestMapping} bidIdMap Yieldbot bid to Prebid bidId mapping
    * @memberof module:modules/YieldbotBidAdapter
    *
   /**
@@ -672,7 +636,6 @@ export const YieldbotAdapter = {
     return params;
   },
 
-  cookiesEnabled: function() { return true; },
   getCookie: function(name) {
     const cookies = document.cookie.split(';');
     let value = null;
