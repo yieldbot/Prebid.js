@@ -85,7 +85,7 @@ export const YieldbotAdapter = {
     USER_ID_TIMEOUT: 2592000000,
     VISIT_ID_TIMEOUT: 2592000000,
     SESSION_ID_TIMEOUT: 180000,
-    COOKIE_PREFIX: '__ybot',
+    COOKIE_PREFIX: '__ybot_',
     IFRAME_TYPE: {
       NONE: 'none',
       SAME_ORIGIN: 'so',
@@ -164,14 +164,12 @@ export const YieldbotAdapter = {
    *   "jcrvvd6eoileb8w8ko:medrec:300x250": "2b7e316788ca7"
    * }
    */
-  _bidRequestParamMap: {},
 
   _pageviewDepth: 0,
   _isInitialized: false,
   initialize: function() {
     if (!this._isInitialized) {
-      this._pageviewDepth = parseInt(this.getCookie(this.CONSTANTS.COOKIES.PAGEVIEW_DEPTH), 10) || 0;
-
+      this._pageviewDepth = this.pageviewDepth;
       this._isInitialized = true;
     }
   },
@@ -189,7 +187,7 @@ export const YieldbotAdapter = {
   get isSessionBlocked() {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_BLOCKED;
     const cookieValue = this.getCookie(cookieName);
-    let sessionBlocked = cookieValue ? parseInt(cookieValue, 10) || 0 : 0;
+    const sessionBlocked = cookieValue ? parseInt(cookieValue, 10) || 0 : 0;
     if (sessionBlocked) {
       this.setCookie(cookieName, 1, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     }
@@ -213,6 +211,14 @@ export const YieldbotAdapter = {
       cookieValue = this.newId();
       this.setCookie(cookieName, cookieValue, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     }
+    return cookieValue;
+  },
+
+  get pageviewDepth() {
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.PAGEVIEW_DEPTH;
+    let cookieValue = parseInt(this.getCookie(cookieName), 10) || 0;
+    cookieValue++;
+    this.setCookie(cookieName, cookieValue, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     return cookieValue;
   },
 
@@ -596,7 +602,7 @@ export const YieldbotAdapter = {
     const pageviewId = this.newId();
     params[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = userId;
     params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = sessionId;
-    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH] = ++this._pageviewDepth;
+    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH] = this._pageviewDepth;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = pageviewId;
 
     params[this.CONSTANTS.REQUEST_PARAMS.USER_AGENT] = navigator.userAgent;
@@ -645,7 +651,6 @@ export const YieldbotAdapter = {
             slotBids[slotName] = slotBids[slotName] || [];
             slotBids[slotName].push(sz);
             const paramKey = pageviewId + ':' + slotName + ':' + sz;
-            this._bidRequestParamMap[paramKey] = bid.bidId;
             bidIdMap[paramKey] = bid.bidId;
           }
         });
