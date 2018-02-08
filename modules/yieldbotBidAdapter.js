@@ -267,11 +267,18 @@ export const YieldbotAdapter = {
    * @memberof module:modules/YieldbotBidAdapter
    */
   isBidRequestValid: function(bid) {
+    let invalidSizeArray = false;
+    if (utils.isArray(bid.sizes)) {
+      const arr = bid.sizes.reduce((acc,cur) => acc.concat(cur), []).filter((item) => {
+        return !utils.isNumber(item);
+      });
+      invalidSizeArray = arr.length !== 0;
+    }
     const ret = bid &&
             bid.params &&
-            utils.isStr(bid.params.psn, 'String') &&
-            utils.isStr(bid.params.slot, 'String') &&
-            utils.isArray(bid.sizes, 'Array') &&
+            utils.isStr(bid.params.psn) &&
+            utils.isStr(bid.params.slot) &&
+            !invalidSizeArray &&
             !!bid.params.psn &&
       !!bid.params.slot;
     return ret;
@@ -334,13 +341,6 @@ export const YieldbotAdapter = {
    */
   getUserSyncs: function(syncOptions, serverResponses) {
     const userSyncs = [];
-    /*
-     {
-       "user_syncs": [
-         "https://idsync.rlcdn.com/456839.gif?partner_uid=vjcfdub3vzykq8tjykx"
-       ]
-     }
-     */
     if (syncOptions.pixelEnabled && serverResponses.length > 0 && utils.isArray(serverResponses[0].body.user_syncs)) {
       const responseUserSyncs = serverResponses[0].body.user_syncs;
       responseUserSyncs.forEach((pixel) => {
@@ -596,7 +596,7 @@ export const YieldbotAdapter = {
     const pageviewId = this.newId();
     params[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = userId;
     params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = sessionId;
-    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH] = this._pageviewDepth + 1;
+    params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH] = ++this._pageviewDepth;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = pageviewId;
 
     params[this.CONSTANTS.REQUEST_PARAMS.USER_AGENT] = navigator.userAgent;
@@ -611,7 +611,7 @@ export const YieldbotAdapter = {
     params[this.CONSTANTS.REQUEST_PARAMS.LOCATION] = utils.getTopWindowUrl();
     params[this.CONSTANTS.REQUEST_PARAMS.REFERRER] = utils.getTopWindowReferrer();
 
-    params[this.CONSTANTS.REQUEST_PARAMS_TERMINATOR] = '';
+    params[this.CONSTANTS.REQUEST_PARAMS.TERMINATOR] = '';
 
     return params;
   },
@@ -638,12 +638,12 @@ export const YieldbotAdapter = {
     try {
       const slotBids = {};
       bidRequests.forEach((bid) => {
-        slotBids[bid.params.slot] = slotBids[bid.params.slot] || [];
         params.psn = params.psn || bid.params.psn || '';
         utils.parseSizesInput(bid.sizes).forEach(sz => {
           const slotName = bid.params.slot;
-          if (!slotBids[slotName].some(existingSize => existingSize === sz)) {
-            slotBids[bid.params.slot].push(sz);
+          if (sz && (!slotBids[slotName] || !slotBids[slotName].some(existingSize => existingSize === sz))) {
+            slotBids[slotName] = slotBids[slotName] || [];
+            slotBids[slotName].push(sz);
             const paramKey = pageviewId + ':' + slotName + ':' + sz;
             this._bidRequestParamMap[paramKey] = bid.bidId;
             bidIdMap[paramKey] = bid.bidId;

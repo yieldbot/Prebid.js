@@ -167,8 +167,22 @@ describe('Yieldbot Adapter Unit Tests', function() {
       },
       adUnitCode: '/0000000/side-bar',
       transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
-      sizes: [300, 250],
+      sizes: [[300, 250]],
       bidId: '49d7fe5c3a15ed',
+      bidderRequestId: '1e878e3676fb85',
+      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+    };
+
+    const bidSky160x600 = {
+      bidder: 'yieldbot',
+      params: {
+        psn: '1234',
+        slot: 'skyscraper'
+      },
+      adUnitCode: '/0000000/side-bar',
+      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
+      sizes: [160, 600],
+      bidId: '49d7fe5c3a16ee',
       bidderRequestId: '1e878e3676fb85',
       auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
     };
@@ -201,7 +215,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
       expect(bidId).to.equal('332067957eaa33');
     });
 
-    it.only('should build slot bid request parameters in order of bidRequests', function() {
+    it('should build slot bid request parameters in order of bidRequests', function() {
       const bidRequests = [bidMedrec300x600, bidLeaderboard728x90, bidMedrec300x250];
       const slotParams = YieldbotAdapter.getSlotRequestParams('f0e1d2c', bidRequests);
 
@@ -219,77 +233,14 @@ describe('Yieldbot Adapter Unit Tests', function() {
       expect(bidId).to.equal('332067957eaa33');
     });
 
-    it('should be empty with array string sizes', function() {
-      expect(YieldbotAdapter.getSlotRequestParams(
-        [
-          ['300', '250'],
-          ['300', '250'],
-          ['300', '600']
-        ])).to.deep.equal([]);
-    });
-
-    it('should be empty with string of sizes', function() {
-      expect(YieldbotAdapter.getSlotRequestParams('300x250,300x250,300x600'))
-        .to.deep.equal([]);
-    });
-
-    it('should be unique with array of formatted string sizes', function() {
-      expect(YieldbotAdapter.getSlotRequestParams(['300x250', '300x250', '300x600']))
-        .to.deep.equal([['300', '250'], ['300', '600']]);
-    });
-  });
-
-  describe('getSlotRequestParams with utils.parseSizesInput', function() {
-    it('should be empty with malformed sizes', function() {
-      const sizes = utils.parseSizesInput('300250,300|250,300#600');
-      expect(YieldbotAdapter.getSlotRequestParams(sizes))
-        .to.deep.equal([]);
-    });
-
-    it('should be unique with string of sizes', function() {
-      const sizes = utils.parseSizesInput('300x250,300x250,300x600');
-      expect(YieldbotAdapter.getSlotRequestParams(sizes))
-        .to.deep.equal([['300', '250'], ['300', '600']]);
-    });
-
-    it('should be empty with array of string sizes', function() {
-      const sizes = utils.parseSizesInput(['300x250', '300x250', '300x600']);
-      expect(YieldbotAdapter.getSlotRequestParams(sizes))
-        .to.deep.equal([]);
-    });
-
-    it('should be unique array sizes', function() {
-      const sizes = utils.parseSizesInput(
-        [
-          ['300', '250'],
-          ['300', '250'],
-          ['300', '600']
-        ]);
-      expect(YieldbotAdapter.getSlotRequestParams(sizes))
-        .to.deep.equal(
-          [
-            ['300', '250'],
-            ['300', '600']
-          ]);
-    });
-
-    it('should be unique string and array sizes', function() {
-      const sizes = utils.parseSizesInput(
-        [
-          ['300x250'],
-          ['300', '250'],
-          ['300', '250'],
-          ['300', '600'],
-          ['300', '600'],
-          ['728', '90']
-        ]);
-      expect(YieldbotAdapter.getSlotRequestParams(sizes))
-        .to.deep.equal(
-          [
-            ['300', '250'],
-            ['300', '600'],
-            ['728', '90']
-          ]);
+    it('should exclude slot bid requests with malformed sizes', function() {
+      const bid = utils.deepClone(bidMedrec300x250);
+      bid.sizes = ['300x250'];
+      const bidRequests = [bid, bidLeaderboard728x90];
+      const slotParams = YieldbotAdapter.getSlotRequestParams('affffffe', bidRequests);
+      expect(slotParams.psn).to.equal('1234');
+      expect(slotParams.sn).to.equal('leaderboard');
+      expect(slotParams.ssz).to.equal('728x90');
     });
   });
 
@@ -436,7 +387,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
     it('should set the default prefix if cookie does not exist', function() {
       const urlPrefix = YieldbotAdapter.urlPrefix();
-      expect(urlPrefix).to.equal(YieldbotAdapter.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX);
+      expect(urlPrefix).to.equal(YieldbotAdapter.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX);
     });
 
     it('should return prefix if cookie exists', function() {
@@ -447,7 +398,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
     it('should reset prefix if default already set', function() {
       const defaultUrlPrefix = YieldbotAdapter.urlPrefix();
-      expect(defaultUrlPrefix).to.equal(YieldbotAdapter.CONSTANTS.DEFAULT_BID_REQUEST_URL_PREFIX);
+      expect(defaultUrlPrefix).to.equal(YieldbotAdapter.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX);
 
       let urlPrefix = YieldbotAdapter.urlPrefix('somePrefixUrl');
       expect(urlPrefix, 'reset prefix').to.equal('somePrefixUrl');
@@ -457,9 +408,9 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
-  describe('buildBidRequestParams', function() {
-    it('should build all parameters', function() {
-      const params = YieldbotAdapter.buildBidRequestParams(
+  describe('initBidRequestParams', function() {
+    it('should build bid request state parameters', function() {
+      const params = YieldbotAdapter.initBidRequestParams(
         [
           {
             'params': {
@@ -478,8 +429,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
         'pvi',
         'pvd',
         'lpvi',
-        'sn',
-        'ssz',
         'lo',
         'r',
         'sd',
@@ -497,63 +446,11 @@ describe('Yieldbot Adapter Unit Tests', function() {
       const missingKeys = [];
 
       expectedParamKeys.forEach((item) => {
-        if (item in params.searchParams === false) {
+        if (item in params === false) {
           missingKeys.push(item);
         }
       });
       expect(missingKeys.length, `Missing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
-    });
-
-    it('should build unique slot sizes', function() {
-      const bidRequests = [
-        {
-          'params': {
-            psn: '1234',
-            slot: 'medrec'
-          },
-          sizes: [[300, 250], [300, 600]]
-        },
-        {
-          'params': {
-            psn: '1234',
-            slot: 'medrec'
-          },
-          sizes: [[300, 250], [300, 600]]
-        },
-        {
-          'params': {
-            psn: '1234',
-            slot: 'leaderboard'
-          },
-          sizes: [970, 90]
-        },
-        {
-          'params': {
-            psn: '1234',
-            slot: 'footerboard'
-          },
-          sizes: [728, 90]
-        },
-        {
-          'params': {
-            psn: '1234',
-            slot: 'leaderboard'
-          },
-          sizes: [[728, 90], [970, 90]]
-        },
-        {
-          'params': {
-            psn: '1234',
-            slot: 'medrec'
-          },
-          sizes: [[160, 600], [300, 250], [300, 600]]
-        }
-      ];
-      const params = YieldbotAdapter.buildBidRequestParams(bidRequests);
-      expect(params.searchParams[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME])
-        .to.equal('medrec|leaderboard|footerboard');
-      expect(params.searchParams[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE])
-        .to.equal('300x250.300x600.160x600|970x90.728x90|728x90');
     });
   });
 
