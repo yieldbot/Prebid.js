@@ -3,7 +3,7 @@ import { formatQS as buildQueryString } from '../src/url';
 import { registerBidder } from 'src/adapters/bidderFactory';
 
 /**
- * @module {BidderSpec} modules/YieldbotBidAdapter
+ * @module {BidderSpec} YieldbotBidAdapter
  * @description Adapter for requesting bids from Yieldbot
  * @see BidderSpec
  * @author [elljoh]{@link https://github.com/elljoh}
@@ -15,7 +15,7 @@ export const YieldbotAdapter = {
   /**
    * @description Yieldbot adapter internal constants
    * @constant
-   * @memberof module:modules/YieldbotBidAdapter
+   * @memberof module:YieldbotBidAdapter
    * @property {string} VERSION Yieldbot adapter version string: <pre>'pbjs-{major}.{minor}.{patch}'</pre>
    * @property {string} DEFAULT_REQUEST_URL_PREFIX Request Url prefix to use when ad server response has not provided availability zone specific prefix
    * @property {string} REQUEST_API_VERSION Yieldbot request API Url path parameter
@@ -31,7 +31,7 @@ export const YieldbotAdapter = {
    * @property {string} IFRAME_TYPE.SAME_ORIGIN in an iFrame with the same origin aka "friendly"
    * @property {string} IFRAME_TYPE.CROSS_ORIGIN in an iFrame with a different origin aka "unfriendly"
    * @property {object} REQUEST_PARAMS Request Url query parameter names
-   * @property {string} REQUEST_PARAMS.ADAPTER_VERSION The version of the YieldbotAdapter code. See [VERSION]{@link module:modules/YieldbotBidAdapter.CONSTANTS}.
+   * @property {string} REQUEST_PARAMS.ADAPTER_VERSION The version of the YieldbotAdapter code. See [VERSION]{@link module:YieldbotBidAdapter.CONSTANTS}.
    * @property {string} REQUEST_PARAMS.USER_ID First party user identifier
    * @property {string} REQUEST_PARAMS.SESSION_ID Publisher site visit session identifier
    * @property {string} REQUEST_PARAMS.PAGEVIEW_ID Page visit identifier
@@ -70,7 +70,6 @@ export const YieldbotAdapter = {
    * @property {string} COOKIES.LAST_PAGEVIEW_ID The last pageview identifier within the session TTL
    * @property {string} COOKIES.PREVIOUS_VISIT The time in [ms] since the last visit within the session TTL
    * @property {string} COOKIES.URL_PREFIX Geo/IP proximity request Url domain
-   * @private
    * @TODO Document parameter optionality for properties
    */
   CONSTANTS: {
@@ -154,7 +153,7 @@ export const YieldbotAdapter = {
    * security and/or fraud detection.
    * @returns {boolean}
    * @readonly
-   * @memberof module:modules/YieldbotBidAdapter
+   * @memberof module:YieldbotBidAdapter
    * @private
    */
   get isSessionBlocked() {
@@ -218,10 +217,10 @@ export const YieldbotAdapter = {
   },
 
   /**
-   * Get/set the request base url used to form bid and ad markup requests.
+   * Get/set the request base url used to form bid, ad markup and impression requests.
    * @param {string} [prefix] the bidder request base url
-   * @memberof module:modules/YieldbotBidAdapter
-   * @private
+   * @returns {string} the request base Url string
+   * @memberof module:YieldbotBidAdapter
    */
   urlPrefix: function(prefix) {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.URL_PREFIX;
@@ -234,20 +233,25 @@ export const YieldbotAdapter = {
   },
 
   /**
-   * @property {string} the bidder identifier code
-   * @memberof module:modules/YieldbotBidAdapter
+   * Bidder identifier code.
+   * @type {string}
+   * @constant
+   * @memberof module:YieldbotBidAdapter
    */
   get code() { return 'yieldbot'; },
 
   /**
-   * @property {string[]} [aliases] A list of aliases which should also resolve to this bidder.
-   * @memberof module:modules/YieldbotBidAdapter
+   * A list of aliases which should also resolve to this bidder.
+   * @type {string[]}
+   * @constant
+   * @memberof module:YieldbotBidAdapter
    */
   get aliases() { return []; },
 
   /**
    * @property {MediaType[]} [supportedMediaTypes]: A list of Media Types which the adapter supports.
-   * @memberof module:modules/YieldbotBidAdapter
+   * @constant
+   * @memberof module:YieldbotBidAdapter
    */
   get supportedMediaTypes() { return ['banner']; },
 
@@ -255,8 +259,8 @@ export const YieldbotAdapter = {
    * Determines whether or not the given bid request is valid.
    *
    * @param {BidRequest} bid The bid params to validate.
-   * @return boolean True if this is a valid bid, and false otherwise.
-   * @memberof module:modules/YieldbotBidAdapter
+   * @returns {boolean} True if this is a valid bid, and false otherwise.
+   * @memberof module:YieldbotBidAdapter
    */
   isBidRequestValid: function(bid) {
     let invalidSizeArray = false;
@@ -281,7 +285,7 @@ export const YieldbotAdapter = {
    *
    * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server.
    * @return ServerRequest Info describing the request to the server.
-   * @memberof module:modules/YieldbotBidAdapter
+   * @memberof module:YieldbotBidAdapter
    */
   buildRequests: function(bidRequests) {
     const requests = [];
@@ -327,7 +331,7 @@ export const YieldbotAdapter = {
    * @param {SyncOptions} syncOptions Which user syncs are allowed?
    * @param {ServerResponse[]} serverResponses List of server's responses.
    * @return {UserSync[]} The user syncs which should be dropped.
-   * @memberof module:modules/YieldbotBidAdapter
+   * @memberof module:YieldbotBidAdapter
    */
   getUserSyncs: function(syncOptions, serverResponses) {
     const userSyncs = [];
@@ -344,11 +348,19 @@ export const YieldbotAdapter = {
   },
 
   /**
+   * @typeDef {YieldbotBid} YieldbotBid
+   * @type {object}
+   * @property {string} slot Yieldbot config param slot
+   * @property {string} cpm Yieldbot bid quantity/label
+   * @property {string} size Slot dimensions of the form <code>&lt;width&gt;x&lt;height&gt;</code>
+   * @memberof module:YieldbotBidAdapter
+   */
+  /**
    * Unpack the response from the server into a list of bids.
    *
    * @param {ServerResponse} serverResponse A successful response from the server.
    * @return {Bid[]} An array of bids which were nested inside the server.
-   * @memberof module:modules/YieldbotBidAdapter
+   * @memberof module:YieldbotBidAdapter
    */
   interpretResponse: function(serverResponse, bidRequest) {
     const bidResponses = [];
@@ -363,7 +375,8 @@ export const YieldbotAdapter = {
         const cpm = parseInt(bid.cpm, 10) / 100.0 || 0;
 
         const yieldbotSlotParams = bidRequest.yieldbotSlotParams || null;
-        const paramKey = bidRequest.data[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] +
+        const ybBidId = bidRequest.data[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID];
+        const paramKey = ybBidId +
                 ':' +
                 bid.slot +
                 ':' +
@@ -377,7 +390,7 @@ export const YieldbotAdapter = {
           cpm: cpm,
           width: width,
           height: height,
-          creativeId: this.newId(),
+          creativeId: ybBidId + ':' + bid.slot + ':' + bid.size,
           currency: 'USD',
           netRevenue: true,
           ttl: this.CONSTANTS.SESSION_ID_TIMEOUT / 1000, // [s]
@@ -415,6 +428,21 @@ export const YieldbotAdapter = {
 
     return impressionUrl;
   },
+  /**
+   * Object with Yieldbot ad markup representation and unique creative identifier.
+   * @typeDef {TagObject} TagObject
+   * @type {object}
+   * @property {string} creativeId bidder specific creative identifier for tracking at the source
+   * @property {string} ad ad creative markup
+   * @memberof module:YieldbotBidAdapter
+   */
+  /**
+   * Builds the ad creative markup.
+   * @param {string} urlPrefix base url for Yieldbot requests
+   * @param {module:YieldbotBidAdapter.YieldbotBid} bid Bidder slot bid object
+   * @returns {module:YieldbotBidAdapter.TagObject}
+   * @memberof module:YieldbotBidAdapter
+   */
   buildAdCreativeTag: function(urlPrefix, bid, bidRequest) {
     const ybotAdRequestId = this.newId();
     const commonSearchParams = {};
@@ -522,22 +550,20 @@ export const YieldbotAdapter = {
   },
 
   /**
-   * @typeDef {YieldbotBidParams} YieldbotBidParams
+   * @typeDef {BidParams} BidParams
    * @property {string} psn Yieldbot publisher customer number
    * @property {object} searchParams bid request Url search parameters
    * @property {object} searchParams.sn slot names
    * @property {object} searchParams.szz slot sizes
-   * @memberof module:modules/YieldbotBidAdapter
+   * @memberof module:YieldbotBidAdapter
    * @private
    */
   /**
    * Builds the common Yieldbot bid request Url query parameters.<br>
    * Slot bid related parameters are handled separately. The so-called common parameters
    * here are request identifiers, page properties and user-agent attributes.
-   * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server
-   * @returns {YieldbotBidParams} query parameter key/value object
-   * @memberof module:modules/YieldbotBidAdapter
-   * @private
+   * @returns {object} query parameter key/value items
+   * @memberof module:YieldbotBidAdapter
    */
   initBidRequestParams: function() {
     const params = {};
@@ -582,43 +608,46 @@ export const YieldbotAdapter = {
   /**
    * Bid mapping key to the Prebid internal bidRequestId<br>
    * Format <code>{pageview id}:{slot name}:{width}x{height}</code>
-   * @typeDef {YieldbotBidRequestKey} YieldbotBidRequestKey
+   * @typeDef {BidRequestKey} BidRequestKey
    * @type {string}
    * @example "jbgxsxqxyxvqm2oud7:leaderboard:728x90"
-   * @memberof module:modules/YieldbotBidAdapter
-   * @private
+   * @memberof module:YieldbotBidAdapter
    */
+
   /**
    * Internal Yieldbot adapter bid and ad markup request state
    * <br>
    * When interpreting a server response, the associated requestId is lookeded up
    * in this map when creating a {@link Bid} response object.
-   * @typeDef {BidRequestMapping}
+   * @typeDef {BidRequestMapping} BidRequestMapping
    * @type {object}
-   * @property {Object.<module:modules/YieldbotBidAdapter.YieldbotBidRequestKey, string>} {*} Yieldbot bid to requestId mapping item
-   * @memberof module:modules/YieldbotBidAdapter
-   * @inner
-   * @private
+   * @property {Object.<module:YieldbotBidAdapter.BidRequestKey, string>} {*} Yieldbot bid to requestId mapping item
+   * @memberof module:YieldbotBidAdapter
    * @example
    * {
    *   "jbgxsxqxyxvqm2oud7:leaderboard:728x90": "2b7e31676ce17",
    *   "jbgxsxqxyxvqm2oud7:medrec:300x250": "2b7e31676cd89",
    *   "jcrvvd6eoileb8w8ko:medrec:300x250": "2b7e316788ca7"
    * }
+   * @memberof module:YieldbotBidAdapter
    */
+
   /**
-   * @typeDef {YieldbotBidSlots} YieldbotBidSlots
+   * Rationalized set of Yieldbot bids for adUnits and mapping to respective Prebid.js bidId.
+   * @typeDef {BidSlots} BidSlots
    * @property {string} psn Yieldbot publisher site identifier taken from bidder params
    * @property {string} sn slot names
    * @property {string} szz slot sizes
-   * @property {BidRequestMapping} bidIdMap Yieldbot bid to Prebid bidId mapping
-   * @memberof module:modules/YieldbotBidAdapter
-   *
+   * @property {module:YieldbotBidAdapter.BidRequestMapping} bidIdMap Yieldbot bid to Prebid bidId mapping
+   * @memberof module:YieldbotBidAdapter
+   */
+
   /**
    * Gets unique slot name and sizes for query parameters object
+   * @param {string} pageviewId The Yieldbot bid request identifier
    * @param {BidRequest[]} bidRequests A non-empty list of bid requests which should be sent to the Server
-   * @returns {YieldbotBidSlots} publisher identifier and slots to bid on
-   * @memberof module:modules/YieldbotBidAdapter
+   * @returns {module:YieldbotBidAdapter.BidSlots} Yieldbot specific bid parameters and bid identifier mapping
+   * @memberof module:YieldbotBidAdapter
    */
   getSlotRequestParams: function(pageviewId, bidRequests) {
     const params = {};
@@ -697,9 +726,10 @@ export const YieldbotAdapter = {
 
   /**
    * Create a delegate function with 'this' context of the YieldbotAdapter object.
-   * @param {Object} instance Object for 'this' context in function apply
-   * @param {Function} fn Function to execute in instance context
-   * @memberof module:modules/YieldbotBidAdapter
+   * @param {object} instance Object for 'this' context in function apply
+   * @param {function} fn Function to execute in instance context
+   * @returns {function} the provided function bound to the instance context
+   * @memberof module:YieldbotBidAdapter
    */
   createDelegate: function(instance, fn) {
     var outerArgs = Array.prototype.slice.call(arguments, 2);
