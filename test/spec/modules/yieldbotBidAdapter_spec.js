@@ -6,123 +6,122 @@ import AdapterManager from 'src/adaptermanager';
 import * as utils from 'src/utils';
 
 describe('Yieldbot Adapter Unit Tests', function() {
-  const ALL_SEARCH_PARAMS = ['apie','bt','cb','cts_ad','cts_imp','cts_ini','cts_js','cts_ns','cts_rend','cts_res','e','ioa','it','la','lo','lpv','lpvi','mtp','np','pvd','pvi','r','ri','sb','sd','si','slot','sn','ssz','to','ua','v','vi'];
+  const ALL_SEARCH_PARAMS = ['apie', 'bt', 'cb', 'cts_ad', 'cts_imp', 'cts_ini', 'cts_js', 'cts_ns', 'cts_rend', 'cts_res', 'e', 'ioa', 'it', 'la', 'lo', 'lpv', 'lpvi', 'mtp', 'np', 'pvd', 'pvi', 'r', 'ri', 'sb', 'sd', 'si', 'slot', 'sn', 'ssz', 'to', 'ua', 'v', 'vi'];
 
   const BID_LEADERBOARD_728x90 = {
-      bidder: 'yieldbot',
-      params: {
-        psn: '1234',
-        slot: 'leaderboard'
-      },
-      adUnitCode: '/0000000/leaderboard',
-      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c19',
-      sizes: [728,90],
-      bidId: '2240b2af6064bb',
-      bidderRequestId: '1e878e3676fb85',
-      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
-    };
+    bidder: 'yieldbot',
+    params: {
+      psn: '1234',
+      slot: 'leaderboard'
+    },
+    adUnitCode: '/0000000/leaderboard',
+    transactionId: '3bcca099-e22a-4e1e-ab60-365a74a87c19',
+    sizes: [728, 90],
+    bidId: '2240b2af6064bb',
+    bidderRequestId: '1e878e3676fb85',
+    auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+  };
 
-    const BID_MEDREC_300x600 = {
-      bidder: 'yieldbot',
-      params: {
-        psn: '1234',
-        slot: 'medrec'
-      },
-      adUnitCode: '/0000000/side-bar',
-      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c20',
-      sizes: [300, 600],
-      bidId: '332067957eaa33',
-      bidderRequestId: '1e878e3676fb85',
-      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
-    };
+  const BID_MEDREC_300x600 = {
+    bidder: 'yieldbot',
+    params: {
+      psn: '1234',
+      slot: 'medrec'
+    },
+    adUnitCode: '/0000000/side-bar',
+    transactionId: '3bcca099-e22a-4e1e-ab60-365a74a87c20',
+    sizes: [300, 600],
+    bidId: '332067957eaa33',
+    bidderRequestId: '1e878e3676fb85',
+    auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+  };
 
-    const BID_MEDREC_300x250 = {
-      bidder: 'yieldbot',
-      params: {
-        psn: '1234',
-        slot: 'medrec'
-      },
-      adUnitCode: '/0000000/medrec',
-      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
-      sizes: [[300, 250]],
-      bidId: '49d7fe5c3a15ed',
-      bidderRequestId: '1e878e3676fb85',
-      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
-    };
+  const BID_MEDREC_300x250 = {
+    bidder: 'yieldbot',
+    params: {
+      psn: '1234',
+      slot: 'medrec'
+    },
+    adUnitCode: '/0000000/medrec',
+    transactionId: '3bcca099-e22a-4e1e-ab60-365a74a87c21',
+    sizes: [[300, 250]],
+    bidId: '49d7fe5c3a15ed',
+    bidderRequestId: '1e878e3676fb85',
+    auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+  };
 
-    const BID_SKY160x600 = {
-      bidder: 'yieldbot',
-      params: {
-        psn: '1234',
-        slot: 'skyscraper'
-      },
-      adUnitCode: '/0000000/side-bar',
-      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
-      sizes: [160, 600],
-      bidId: '49d7fe5c3a16ee',
-      bidderRequestId: '1e878e3676fb85',
-      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
-    };
+  const BID_SKY160x600 = {
+    bidder: 'yieldbot',
+    params: {
+      psn: '1234',
+      slot: 'skyscraper'
+    },
+    adUnitCode: '/0000000/side-bar',
+    transactionId: '3bcca099-e22a-4e1e-ab60-365a74a87c21',
+    sizes: [160, 600],
+    bidId: '49d7fe5c3a16ee',
+    bidderRequestId: '1e878e3676fb85',
+    auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+  };
 
   const AD_UNITS = [
-      {
-        transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c19',
-        code: '/00000000/leaderboard',
-        sizes: [728, 90],
-        bids: [
-          {
-            bidder: 'yieldbot',
-            params: {
-              psn: '1234',
-              slot: 'leaderboard'
-            }
+    {
+      transactionId: '3bcca099-e22a-4e1e-ab60-365a74a87c19',
+      code: '/00000000/leaderboard',
+      sizes: [728, 90],
+      bids: [
+        {
+          bidder: 'yieldbot',
+          params: {
+            psn: '1234',
+            slot: 'leaderboard'
           }
-        ]
-      },
-      {
-        transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c20',
-        code: '/00000000/medrec',
-        sizes: [[300, 250]],
-        bids: [
-          {
-            bidder: 'yieldbot',
-            params: {
-              psn: '1234',
-              slot: 'medrec'
-            }
+        }
+      ]
+    },
+    {
+      transactionId: '3bcca099-e22a-4e1e-ab60-365a74a87c20',
+      code: '/00000000/medrec',
+      sizes: [[300, 250]],
+      bids: [
+        {
+          bidder: 'yieldbot',
+          params: {
+            psn: '1234',
+            slot: 'medrec'
           }
-        ]
-      },
-      {
-        transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
-        code: '/00000000/multi-size',
-        sizes: [[300,600]],
-        bids: [
-          {
-            bidder: 'yieldbot',
-            params: {
-              psn: '1234',
-              slot: 'medrec'
-            }
+        }
+      ]
+    },
+    {
+      transactionId: '3bcca099-e22a-4e1e-ab60-365a74a87c21',
+      code: '/00000000/multi-size',
+      sizes: [[300, 600]],
+      bids: [
+        {
+          bidder: 'yieldbot',
+          params: {
+            psn: '1234',
+            slot: 'medrec'
           }
-        ]
-      },
-      {
-        transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c22',
-        code: '/00000000/skyscraper',
-        sizes: [[160, 600]],
-        bids: [
-          {
-            bidder: 'yieldbot',
-            params: {
-              psn: '1234',
-              slot: 'skyscraper'
-            }
+        }
+      ]
+    },
+    {
+      transactionId: '3bcca099-e22a-4e1e-ab60-365a74a87c22',
+      code: '/00000000/skyscraper',
+      sizes: [[160, 600]],
+      bids: [
+        {
+          bidder: 'yieldbot',
+          params: {
+            psn: '1234',
+            slot: 'skyscraper'
           }
-        ]
-      }
-    ];
-
+        }
+      ]
+    }
+  ];
 
   const INTERPRET_RESPONSE_BID_REQUEST = {
     method: 'GET',
@@ -201,10 +200,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
     headers: {}
   };
 
-  let FIXTURE_SERVER_RESPONSE,
-      FIXTURE_BID_REQUEST,
-      FIXTURE_BID_REQUESTS,
-      FIXTURE_BIDS;
+  let FIXTURE_SERVER_RESPONSE, FIXTURE_BID_REQUEST, FIXTURE_BID_REQUESTS, FIXTURE_BIDS;
   beforeEach(function() {
     FIXTURE_BIDS = {
       BID_LEADERBOARD_728x90: utils.deepClone(BID_LEADERBOARD_728x90),
@@ -360,62 +356,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('getSlotRequestParams', function() {
-    const bidLeaderboard728x90 = {
-      bidder: 'yieldbot',
-      params: {
-        psn: '1234',
-        slot: 'leaderboard'
-      },
-      adUnitCode: '/0000000/leaderboard',
-      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c19',
-      sizes: [728,90],
-      bidId: '2240b2af6064bb',
-      bidderRequestId: '1e878e3676fb85',
-      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
-    };
-
-    const bidMedrec300x600 = {
-      bidder: 'yieldbot',
-      params: {
-        psn: '1234',
-        slot: 'medrec'
-      },
-      adUnitCode: '/0000000/side-bar',
-      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c20',
-      sizes: [300, 600],
-      bidId: '332067957eaa33',
-      bidderRequestId: '1e878e3676fb85',
-      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
-    };
-
-    const bidMedrec300x250 = {
-      bidder: 'yieldbot',
-      params: {
-        psn: '1234',
-        slot: 'medrec'
-      },
-      adUnitCode: '/0000000/side-bar',
-      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
-      sizes: [[300, 250]],
-      bidId: '49d7fe5c3a15ed',
-      bidderRequestId: '1e878e3676fb85',
-      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
-    };
-
-    const bidSky160x600 = {
-      bidder: 'yieldbot',
-      params: {
-        psn: '1234',
-        slot: 'skyscraper'
-      },
-      adUnitCode: '/0000000/side-bar',
-      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
-      sizes: [160, 600],
-      bidId: '49d7fe5c3a16ee',
-      bidderRequestId: '1e878e3676fb85',
-      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
-    };
-
     const EMPTY_SLOT_PARAMS = { sn: '', ssz: '', bidIdMap: {} };
 
     it('should default to empty slot params', function() {
@@ -426,7 +366,11 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
 
     it('should build slot bid request parameters', function() {
-      const bidRequests = [bidLeaderboard728x90, bidMedrec300x600, bidMedrec300x250];
+      const bidRequests = [
+        FIXTURE_BIDS.BID_LEADERBOARD_728x90,
+        FIXTURE_BIDS.BID_MEDREC_300x600,
+        FIXTURE_BIDS.BID_MEDREC_300x250
+      ];
       const slotParams = YieldbotAdapter.getSlotRequestParams('f0e1d2c', bidRequests);
 
       expect(slotParams.psn).to.equal('1234');
@@ -444,7 +388,12 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
 
     it('should build slot bid request parameters in order of bidRequests', function() {
-      const bidRequests = [bidMedrec300x600, bidLeaderboard728x90, bidMedrec300x250];
+      const bidRequests = [
+        FIXTURE_BIDS.BID_MEDREC_300x250,
+        FIXTURE_BIDS.BID_LEADERBOARD_728x90,
+        FIXTURE_BIDS.BID_MEDREC_300x600
+      ];
+
       const slotParams = YieldbotAdapter.getSlotRequestParams('f0e1d2c', bidRequests);
 
       expect(slotParams.psn).to.equal('1234');
@@ -478,7 +427,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
       expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
     });
   });
-
 
   describe('setCookie', function() {
     it('should set a root path first-party cookie with temporal expiry', function() {
@@ -745,7 +693,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
       expect(missingKeys.length, `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
       expect(extraKeys.length, `\nExpected: ${expectedParamKeys}\nExtra keys: ${JSON.stringify(extraKeys)}`).to.equal(0);
-
     });
   });
 
@@ -862,17 +809,65 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
     it('should not return Bids if no server response slot bids', function() {
       FIXTURE_SERVER_RESPONSE.body.slots = [];
-      const responses = YieldbotAdapter.interpretResponse(FIXTURE_SERVER_RESPONSE,
-                                                          FIXTURE_BID_REQUEST);
+      const responses = YieldbotAdapter.interpretResponse(FIXTURE_SERVER_RESPONSE, FIXTURE_BID_REQUEST);
       expect(responses.length).to.equal(0);
     });
-    it('should mumble', function() {
+
+    it('should not include Bid if missing cpm', function() {
+      delete FIXTURE_SERVER_RESPONSE.body.slots[1].cpm;
+      const responses = YieldbotAdapter.interpretResponse(
+        FIXTURE_SERVER_RESPONSE,
+        FIXTURE_BID_REQUEST
+      );
+      expect(responses.length).to.equal(3);
     });
-    it('should mumble', function() {
+
+    it('should not include Bid if missing size', function() {
+      delete FIXTURE_SERVER_RESPONSE.body.slots[2].size;
+      const responses = YieldbotAdapter.interpretResponse(
+        FIXTURE_SERVER_RESPONSE,
+        FIXTURE_BID_REQUEST
+      );
+      expect(responses.length).to.equal(3);
     });
-    it('should mumble', function() {
+
+    it('should not include Bid if missing slot', function() {
+      delete FIXTURE_SERVER_RESPONSE.body.slots[3].slot;
+      const responses = YieldbotAdapter.interpretResponse(
+        FIXTURE_SERVER_RESPONSE,
+        FIXTURE_BID_REQUEST
+      );
+      expect(responses.length).to.equal(3);
     });
-    it('should mumble', function() {
+
+    it('should have a valid creativeId', function() {
+      const responses = YieldbotAdapter.interpretResponse(
+        FIXTURE_SERVER_RESPONSE,
+        FIXTURE_BID_REQUEST
+      );
+      expect(responses.length).to.equal(4);
+      responses.forEach((bid) => {
+        expect(bid.creativeId).to.match(/[0-9a-z]{18}/);
+        const containerDivId = 'ybot-' + bid.creativeId;
+        const re = new RegExp(containerDivId);
+        expect(re.test(bid.ad)).to.equal(true);
+      });
+    });
+
+    it('should specify Net revenue type for bid', function() {
+      const responses = YieldbotAdapter.interpretResponse(
+        FIXTURE_SERVER_RESPONSE,
+        FIXTURE_BID_REQUEST
+      );
+      expect(responses[0].netRevenue).to.equal(true);
+    });
+
+    it('should specify USD currency for bid', function() {
+      const responses = YieldbotAdapter.interpretResponse(
+        FIXTURE_SERVER_RESPONSE,
+        FIXTURE_BID_REQUEST
+      );
+      expect(responses[1].currency).to.equal('USD');
     });
   });
 

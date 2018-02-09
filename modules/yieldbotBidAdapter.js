@@ -17,6 +17,9 @@ export const YieldbotAdapter = {
    * @constant
    * @memberof module:YieldbotBidAdapter
    * @property {string} VERSION Yieldbot adapter version string: <pre>'pbjs-{major}.{minor}.{patch}'</pre>
+   * @property {string} CURRENCY 3-letter ISO 4217 code defining the currency of the bid
+   * @property {boolean} NET_REVENUE Bid value is net or gross. True = Net.e
+
    * @property {string} DEFAULT_REQUEST_URL_PREFIX Request Url prefix to use when ad server response has not provided availability zone specific prefix
    * @property {string} REQUEST_API_VERSION Yieldbot request API Url path parameter
    * @property {string} REQUEST_API_PATH_BID Yieldbot bid request API path component
@@ -74,6 +77,8 @@ export const YieldbotAdapter = {
    */
   CONSTANTS: {
     VERSION: 'pbjs-yb-1.0.0',
+    CURRENCY: 'USD',
+    NET_REVENUE: true,
     DEFAULT_REQUEST_URL_PREFIX: '//i.yldbt.com/m/',
     REQUEST_API_VERSION: '/v1',
     REQUEST_API_PATH_BID: '/init',
@@ -265,7 +270,7 @@ export const YieldbotAdapter = {
   isBidRequestValid: function(bid) {
     let invalidSizeArray = false;
     if (utils.isArray(bid.sizes)) {
-      const arr = bid.sizes.reduce((acc,cur) => acc.concat(cur), []).filter((item) => {
+      const arr = bid.sizes.reduce((acc, cur) => acc.concat(cur), []).filter((item) => {
         return !utils.isNumber(item);
       });
       invalidSizeArray = arr.length !== 0;
@@ -369,34 +374,37 @@ export const YieldbotAdapter = {
     if (!this.optOut) {
       const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : [];
       slotBids.forEach((bid) => {
-        const sizeParts = bid.size ? bid.size.split('x') : [1, 1];
-        const width = sizeParts[0] || 1;
-        const height = sizeParts[1] || 1;
-        const cpm = parseInt(bid.cpm, 10) / 100.0 || 0;
+        if (bid.slot && bid.size && bid.cpm) {
+          const sizeParts = bid.size ? bid.size.split('x') : [1, 1];
+          const width = sizeParts[0] || 1;
+          const height = sizeParts[1] || 1;
+          const cpm = parseInt(bid.cpm, 10) / 100.0 || 0;
 
-        const yieldbotSlotParams = bidRequest.yieldbotSlotParams || null;
-        const ybBidId = bidRequest.data[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID];
-        const paramKey = ybBidId +
-                ':' +
-                bid.slot +
-                ':' +
-                bid.size || '';
-        const bidIdMap = yieldbotSlotParams && yieldbotSlotParams.bidIdMap ? yieldbotSlotParams.bidIdMap : {};
-        const requestId = bidIdMap[paramKey] || '';
+          const yieldbotSlotParams = bidRequest.yieldbotSlotParams || null;
+          const ybBidId = bidRequest.data[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID];
+          const paramKey = ybBidId +
+                  ':' +
+                  bid.slot +
+                  ':' +
+                  bid.size || '';
+          const bidIdMap = yieldbotSlotParams && yieldbotSlotParams.bidIdMap ? yieldbotSlotParams.bidIdMap : {};
+          const requestId = bidIdMap[paramKey] || '';
 
-        const urlPrefix = responseBody.url_prefix || this.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX;
-        const bidResponse = {
-          requestId: requestId,
-          cpm: cpm,
-          width: width,
-          height: height,
-          creativeId: ybBidId + ':' + bid.slot + ':' + bid.size,
-          currency: 'USD',
-          netRevenue: true,
-          ttl: this.CONSTANTS.SESSION_ID_TIMEOUT / 1000, // [s]
-          ad: this.buildAdCreativeTag(urlPrefix, bid, bidRequest)
-        };
-        bidResponses.push(bidResponse);
+          const urlPrefix = responseBody.url_prefix || this.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX;
+          const tagObject = this.buildAdCreativeTag(urlPrefix, bid, bidRequest);
+          const bidResponse = {
+            requestId: requestId,
+            cpm: cpm,
+            width: width,
+            height: height,
+            creativeId: tagObject.creativeId,
+            currency: this.CONSTANTS.CURRENCY,
+            netRevenue: this.CONSTANTS.NET_REVENUE,
+            ttl: this.CONSTANTS.SESSION_ID_TIMEOUT / 1000, // [s]
+            ad: tagObject.ad
+          };
+          bidResponses.push(bidResponse);
+        }
       });
     }
     return bidResponses;
@@ -415,8 +423,8 @@ export const YieldbotAdapter = {
             '?' +
             queryString;
     return adUrl;
-
   },
+
   buildImpressionUrl: function(urlPrefix, publisherNumber, commonSearchParams, bidRequestData) {
     const searchParams = Object.assign({}, commonSearchParams);
     const queryString = buildQueryString(searchParams) || '';
@@ -428,6 +436,7 @@ export const YieldbotAdapter = {
 
     return impressionUrl;
   },
+
   /**
    * Object with Yieldbot ad markup representation and unique creative identifier.
    * @typeDef {TagObject} TagObject
@@ -456,7 +465,7 @@ export const YieldbotAdapter = {
     const adUrl = this.buildAdUrl(urlPrefix, publisherNumber, commonSearchParams, bid);
     const impressionUrl = this.buildImpressionUrl(urlPrefix, publisherNumber, commonSearchParams);
 
-    let htmlMarkup = `<div id=ybot-${ybotAdRequestId}></div>
+    let htmlMarkup = `<div id="ybot-${ybotAdRequestId}"></div>
 <script type="text/javascript">
   var yieldbot = {
     iframeType: function (win) {
@@ -522,7 +531,7 @@ export const YieldbotAdapter = {
   var firstEl = document.getElementsByTagName('script')[0];
   firstEl.parentNode.insertBefore(jsEl, firstEl);
 </script>`;
-    return htmlMarkup;
+    return { ad: htmlMarkup, creativeId: ybotAdRequestId };
   },
   iframeType: function (win) {
     let it = this.CONSTANTS.IFRAME_TYPE.NONE;
