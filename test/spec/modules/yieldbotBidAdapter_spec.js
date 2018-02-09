@@ -509,6 +509,32 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
+
+  describe('lastPageviewTime', function() {
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.PREVIOUS_VISIT;
+
+    beforeEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+    });
+
+    afterEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+      expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
+    });
+
+    it('should return zero if cookie does not exist', function() {
+      const lastBidTime = YieldbotAdapter.lastPageviewTime;
+      expect(lastBidTime).to.equal(0);
+    });
+
+    it('should set a timestamp', function() {
+      const ts = Date.now();
+      YieldbotAdapter.lastPageviewTime = ts;
+      const lastBidTime = YieldbotAdapter.lastPageviewTime;
+      expect(lastBidTime).to.equal(ts);
+    });
+  });
+
   describe('urlPrefix', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.URL_PREFIX;
 
