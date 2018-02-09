@@ -6,8 +6,7 @@ import AdapterManager from 'src/adaptermanager';
 import * as utils from 'src/utils';
 
 describe('Yieldbot Adapter Unit Tests', function() {
-  let AD_UNITS,
-      ALL_SEARCH_PARAMS = ['apie','bt','cb','cts_ad','cts_imp','cts_ini','cts_js','cts_ns','cts_rend','cts_res','e','ioa','it','la','lo','lpv','lpvi','mtp','np','pvd','pvi','r','ri','sb','sd','si','slot','sn','ssz','to','ua','v','vi'];
+  const ALL_SEARCH_PARAMS = ['apie','bt','cb','cts_ad','cts_imp','cts_ini','cts_js','cts_ns','cts_rend','cts_res','e','ioa','it','la','lo','lpv','lpvi','mtp','np','pvd','pvi','r','ri','sb','sd','si','slot','sn','ssz','to','ua','v','vi'];
 
   const BID_LEADERBOARD_728x90 = {
       bidder: 'yieldbot',
@@ -66,8 +65,8 @@ describe('Yieldbot Adapter Unit Tests', function() {
     };
 
   const ADAPTER_BID_REQUESTS = [BID_LEADERBOARD_728x90, BID_MEDREC_300x600, BID_MEDREC_300x250, BID_SKY160x600];
-  beforeEach(function() {
-    AD_UNITS = [
+
+  const AD_UNITS = [
       {
         transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c19',
         code: '/00000000/leaderboard',
@@ -105,7 +104,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
             bidder: 'yieldbot',
             params: {
               psn: '1234',
-              slot: 'sidebar'
+              slot: 'medrec'
             }
           }
         ]
@@ -125,13 +124,99 @@ describe('Yieldbot Adapter Unit Tests', function() {
         ]
       }
     ];
+
+
+  const INTERPRET_RESPONSE_BID_REQUEST = {
+    method: 'GET',
+    url: '//i.yldbt.com/m/1234/v1/init',
+    data: {
+      cts_js: 1518184900582,
+      cts_ns: 1518184900582,
+      v: 'pbjs-yb-1.0.0',
+      vi: 'jdg00eijgpvemqlz73',
+      si: 'jdg00eil9y4mcdo850',
+      pvd: 6,
+      pvi: 'jdg03ai5kp9k1rkheh',
+      lpv: 1518184868108,
+      lpvi: 'jdg02lfwmdx8n0ncgc',
+      bt: 'init',
+      ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',
+      np: 'MacIntel',
+      la: 'en-US',
+      to: 5,
+      sd: '2560x1440',
+      lo: 'http://localhost:9999/test/spec/e2e/gpt-examples/gpt_yieldbot.html',
+      r: '',
+      e: '',
+      sn: 'leaderboard|medrec|medrec|skyscraper',
+      ssz: '728x90|300x250|300x600|160x600',
+      cts_ini: 1518184900591
+    },
+    yieldbotSlotParams: {
+      psn: '1234',
+      sn: 'leaderboard|medrec|medrec|skyscraper',
+      ssz: '728x90|300x250|300x600|160x600',
+      bidIdMap: {
+        'jdg03ai5kp9k1rkheh:leaderboard:728x90': '2240b2af6064bb',
+        'jdg03ai5kp9k1rkheh:medrec:300x250': '49d7fe5c3a15ed',
+        'jdg03ai5kp9k1rkheh:medrec:300x600': '332067957eaa33',
+        'jdg03ai5kp9k1rkheh:skyscraper:160x600': '49d7fe5c3a16ee'
+      }
+    },
+    options: {
+      withCredentials: true,
+      customHeaders: {
+        Accept: 'application/json'
+      }
+    }
+  };
+
+  const INTERPRET_RESPONSE_SERVER_RESPONSE = {
+    body: {
+      pvi: 'jdg03ai5kp9k1rkheh',
+      subdomain_iframe: 'ads-adseast-vpc',
+      url_prefix: 'http://ads-adseast-vpc.yldbt.com/m/',
+      integration_test: true,
+      slots: [
+        {
+          slot: 'leaderboard',
+          cpm: '800',
+          size: '728x90'
+        },
+        {
+          slot: 'medrec',
+          cpm: '300',
+          size: '300x250'
+        },
+        {
+          slot: 'medrec',
+          cpm: '800',
+          size: '300x600'
+        },
+        {
+          slot: 'skyscraper',
+          cpm: '300',
+          size: '160x600'
+        }
+      ]
+    },
+    headers: {}
+  };
+
+  let FIXTURE_SERVER_RESPONSE,
+      FIXTURE_BID_REQUEST,
+      FIXTURE_BID_REQUESTS;
+  beforeEach(function() {
+    FIXTURE_BID_REQUEST = utils.deepClone(INTERPRET_RESPONSE_BID_REQUEST);
+    FIXTURE_SERVER_RESPONSE = utils.deepClone(INTERPRET_RESPONSE_SERVER_RESPONSE);
+    FIXTURE_BID_REQUESTS = utils.deepClone(ADAPTER_BID_REQUESTS);
   });
 
   afterEach(function() {
     YieldbotAdapter._optOut = false;
   });
 
-  describe('Adapter spec API', function() {
+  describe('Adapter exposes BidderSpec API', function() {
     it('code', function() {
       expect(spec.code).to.equal('yieldbot');
     });
@@ -656,15 +741,15 @@ describe('Yieldbot Adapter Unit Tests', function() {
   describe('buildRequests', function() {
     it('should not return bid requests if optOut', function() {
       YieldbotAdapter._optOut = true;
-      const requests = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS);
+      const requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);
       expect(requests.length).to.equal(0);
     });
     it('should return a single BidRequest object', function() {
-      const requests = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS);
+      const requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);
       expect(requests.length).to.equal(1);
     });
     it('should have expected server options', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       const expectedOptions = {
         withCredentials: true,
         customHeaders: {
@@ -674,11 +759,11 @@ describe('Yieldbot Adapter Unit Tests', function() {
       expect(request.options).to.eql(expectedOptions);
     });
     it('should be a GET request', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.method).to.equal('GET');
     });
     it('should have bid request specific params', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.data).to.not.equal(undefined);
 
       const expectedParamKeys = [
@@ -723,13 +808,13 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
 
     it('should have the correct bidUrl form', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       const bidUrl = '//i.yldbt.com/m/1234/v1/init';
       expect(request.url).to.equal(bidUrl);
     });
 
     it('should set the bid request slot/bidId mapping', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.yieldbotSlotParams).to.not.equal(undefined);
       expect(request.yieldbotSlotParams.bidIdMap).to.not.equal(undefined);
 
@@ -742,18 +827,43 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
 
     it('should set the bid request publisher number', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.yieldbotSlotParams.psn).to.equal('1234');
     });
 
     it('should have unique slot name parameter', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.yieldbotSlotParams.sn).to.equal('leaderboard|medrec|skyscraper');
     });
 
     it('should have slot sizes parameter', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.yieldbotSlotParams.ssz).to.equal('728x90|300x600.300x250|160x600');
+    });
+  });
+
+  describe('interpretResponse', function() {
+    it('should not return Bids if optOut', function() {
+      YieldbotAdapter._optOut = true;
+      const responses = YieldbotAdapter.interpretResponse();
+      expect(responses.length).to.equal(0);
+    });
+
+    it('should not return Bids if no server response slot bids', function() {
+      const noBidsResponse = utils.deepClone(FIXTURE_SERVER_RESPONSE);
+      noBidsResponse.body.slots = [];
+
+      const responses = YieldbotAdapter.interpretResponse(noBidsResponse,
+                                                          FIXTURE_BID_REQUEST);
+      expect(responses.length).to.equal(0);
+    });
+    it('should mumble', function() {
+    });
+    it('should mumble', function() {
+    });
+    it('should mumble', function() {
+    });
+    it('should mumble', function() {
     });
   });
 
@@ -792,7 +902,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
           size: '300x250'
         },
         {
-          slot: 'sidebar',
+          slot: 'medrec',
           cpm: '800',
           size: '300x600'
         },
@@ -817,7 +927,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
           JSON.stringify(serverResponse)
         ]
       );
-      AdapterManager.callBids(AD_UNITS, ADAPTER_BID_REQUESTS, () => {
+      AdapterManager.callBids(AD_UNITS, FIXTURE_BID_REQUESTS, () => {
         console.log('addBidResponse', arguments);
       }, () => {
         console.log('doneCb', arguments);
@@ -828,7 +938,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
     it('should do something else', function(done) {
       AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
 
-      const ret = AdapterManager.callBids(AD_UNITS, ADAPTER_BID_REQUESTS, () => {}, () => {
+      const ret = AdapterManager.callBids(AD_UNITS, FIXTURE_BID_REQUESTS, () => {}, () => {
         return () => {
           console.log('done', requests);
         };
