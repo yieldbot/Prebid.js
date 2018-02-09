@@ -418,6 +418,9 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
   describe('isSessionBlocked', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.SESSION_BLOCKED;
+    beforeEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+    });
 
     afterEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
@@ -469,6 +472,9 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
   describe('userId', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.USER_ID;
+    beforeEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+    });
 
     afterEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
@@ -490,6 +496,9 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
   describe('sessionId', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.SESSION_ID;
+    beforeEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+    });
 
     afterEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
@@ -509,6 +518,30 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
+  describe('lastPageviewId', function() {
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
+
+    beforeEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+    });
+
+    afterEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+      expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
+    });
+
+    it('should return empty string if cookie does not exist', function() {
+      const lastBidId = YieldbotAdapter.lastPageviewId;
+      expect(lastBidId).to.equal('');
+    });
+
+    it('should set an id string', function() {
+      const id = YieldbotAdapter.newId();
+      YieldbotAdapter.lastPageviewId = id;
+      const lastBidId = YieldbotAdapter.lastPageviewId;
+      expect(lastBidId).to.equal(id);
+    });
+  });
 
   describe('lastPageviewTime', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.PREVIOUS_VISIT;

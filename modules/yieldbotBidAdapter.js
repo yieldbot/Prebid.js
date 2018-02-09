@@ -195,6 +195,17 @@ export const YieldbotAdapter = {
     return cookieValue;
   },
 
+  get lastPageviewId() {
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
+    let cookieValue = this.getCookie(cookieName);
+    return cookieValue || '';
+  },
+
+  set lastPageviewId(id) {
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
+    return this.setCookie(cookieName, id, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
+  },
+
   get lastPageviewTime() {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.PREVIOUS_VISIT;
     let cookieValue = this.getCookie(cookieName);
@@ -540,12 +551,15 @@ export const YieldbotAdapter = {
     const pageviewId = this.newId();
     const currentBidTime = Date.now();
     const lastBidTime = this.lastPageviewTime;
+    const lastBidId = this.lastPageviewId;
     this.lastPageviewTime = currentBidTime;
+    this.lastPageviewId = pageviewId;
     params[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = userId;
     params[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = sessionId;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH] = this._pageviewDepth;
     params[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = pageviewId;
     params[this.CONSTANTS.REQUEST_PARAMS.LAST_PAGEVIEW_TIME] = lastBidTime;
+    params[this.CONSTANTS.REQUEST_PARAMS.LAST_PAGEVIEW_ID] = lastBidId;
     params[this.CONSTANTS.REQUEST_PARAMS.BID_TYPE] = this._bidRequestCount === 0 ? 'init' : 'refresh';
 
     params[this.CONSTANTS.REQUEST_PARAMS.USER_AGENT] = navigator.userAgent;
