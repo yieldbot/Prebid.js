@@ -2,6 +2,8 @@ import { expect } from 'chai';
 import { spec } from 'modules/yieldoneBidAdapter';
 import { newBidder } from 'src/adapters/bidderFactory';
 
+const ENDPOINT = '//y.one.impact-ad.jp/h_bid';
+
 describe('yieldoneBidAdapter', function() {
   const adapter = newBidder(spec);
 
@@ -17,7 +19,7 @@ describe('yieldoneBidAdapter', function() {
       ],
       'bidId': '23beaa6af6cdde',
       'bidderRequestId': '19c0c1efdf37e7',
-      'auctionId': '61466567-d482-4a16-96f0-fe5f25ffbdf1'
+      'auctionId': '61466567-d482-4a16-96f0-fe5f25ffbdf1',
     };
 
     it('should return true when required params found', () => {
@@ -49,7 +51,7 @@ describe('yieldoneBidAdapter', function() {
         ],
         'bidId': '23beaa6af6cdde',
         'bidderRequestId': '19c0c1efdf37e7',
-        'auctionId': '61466567-d482-4a16-96f0-fe5f25ffbdf1'
+        'auctionId': '61466567-d482-4a16-96f0-fe5f25ffbdf1',
       },
       {
         'bidder': 'yieldone',
@@ -62,7 +64,7 @@ describe('yieldoneBidAdapter', function() {
         ],
         'bidId': '382091349b149f"',
         'bidderRequestId': '"1f9c98192de251"',
-        'auctionId': '61466567-d482-4a16-96f0-fe5f25ffbdf1'
+        'auctionId': '61466567-d482-4a16-96f0-fe5f25ffbdf1',
       }
     ];
 
