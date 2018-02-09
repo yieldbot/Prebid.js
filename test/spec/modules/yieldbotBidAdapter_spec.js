@@ -5,9 +5,68 @@ import AdapterManager from 'src/adaptermanager';
 import * as utils from 'src/utils';
 
 describe('Yieldbot Adapter Unit Tests', function() {
-  let _adUnits, _bidRequests;
+  let AD_UNITS,
+      ALL_SEARCH_PARAMS = ['apie','bt','cb','cts_ad','cts_imp','cts_ini','cts_js','cts_ns','cts_rend','cts_res','e','ioa','it','la','lo','lpv','lpvi','mtp','np','pvd','pvi','r','ri','sb','sd','si','slot','sn','ssz','to','ua','v','vi'];
+
+  const BID_LEADERBOARD_728x90 = {
+      bidder: 'yieldbot',
+      params: {
+        psn: '1234',
+        slot: 'leaderboard'
+      },
+      adUnitCode: '/0000000/leaderboard',
+      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c19',
+      sizes: [728,90],
+      bidId: '2240b2af6064bb',
+      bidderRequestId: '1e878e3676fb85',
+      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+    };
+
+    const BID_MEDREC_300x600 = {
+      bidder: 'yieldbot',
+      params: {
+        psn: '1234',
+        slot: 'medrec'
+      },
+      adUnitCode: '/0000000/side-bar',
+      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c20',
+      sizes: [300, 600],
+      bidId: '332067957eaa33',
+      bidderRequestId: '1e878e3676fb85',
+      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+    };
+
+    const BID_MEDREC_300x250 = {
+      bidder: 'yieldbot',
+      params: {
+        psn: '1234',
+        slot: 'medrec'
+      },
+      adUnitCode: '/0000000/side-bar',
+      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
+      sizes: [[300, 250]],
+      bidId: '49d7fe5c3a15ed',
+      bidderRequestId: '1e878e3676fb85',
+      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+    };
+
+    const BID_SKY160x600 = {
+      bidder: 'yieldbot',
+      params: {
+        psn: '1234',
+        slot: 'skyscraper'
+      },
+      adUnitCode: '/0000000/side-bar',
+      transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
+      sizes: [160, 600],
+      bidId: '49d7fe5c3a16ee',
+      bidderRequestId: '1e878e3676fb85',
+      auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
+    };
+
+  const ADAPTER_BID_REQUESTS = [BID_LEADERBOARD_728x90, BID_MEDREC_300x600, BID_MEDREC_300x250, BID_SKY160x600];
   beforeEach(function() {
-    _adUnits = [
+    AD_UNITS = [
       {
         transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c19',
         code: '/00000000/leaderboard',
@@ -65,8 +124,12 @@ describe('Yieldbot Adapter Unit Tests', function() {
         ]
       }
     ];
-    _bidRequests = AdapterManager.makeBidRequests(_adUnits, Date.now(), 1234567890, 1000);
   });
+
+  afterEach(function() {
+    YieldbotAdapter._optOut = false;
+  });
+
   describe('Adapter spec API', function() {
     it('code', function() {
       expect(spec.code).to.equal('yieldbot');
@@ -85,6 +148,13 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
+  describe('CONSTANTS.REQUEST_PARAMS', function() {
+    it('should have all request search params defined and no more', function() {
+      const requestParamsValues = utils.getKeys(YieldbotAdapter.CONSTANTS.REQUEST_PARAMS)
+        .map(key => utils.getValue(YieldbotAdapter.CONSTANTS.REQUEST_PARAMS, key));
+      expect(Object.values(requestParamsValues.sort())).to.deep.equal(ALL_SEARCH_PARAMS.sort());
+    });
+  });
   describe('isBidRequestValid', function() {
     let bid = {
       bidder: 'yieldbot',
@@ -485,24 +555,23 @@ describe('Yieldbot Adapter Unit Tests', function() {
       );
 
       const expectedParamKeys = [
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.USER_ID,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.SESSION_ID,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_TYPE,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_DEPTH,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.LAST_PAGEVIEW_ID,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.LOCATION,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.REFERRER,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.SCREEN_DIMENSIONS,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.TIMEZONE_OFFSET,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.LANGUAGE,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.NAVIGATOR_PLATFORM,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.USER_AGENT,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.LAST_PAGEVIEW_TIME,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.NAVIGATION_START_TIME,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.ADAPTER_LOADED_TIME,
-        YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.TERMINATOR
+        'v',
+        'vi',
+        'si',
+        'pvi',
+        'pvd',
+        'lpvi',
+        'lo',
+        'r',
+        'sd',
+        'to',
+        'la',
+        'np',
+        'ua',
+        'lpv',
+        'cts_ns',
+        'cts_js',
+        'e'
       ];
 
       const missingKeys = [];
@@ -511,22 +580,136 @@ describe('Yieldbot Adapter Unit Tests', function() {
           missingKeys.push(item);
         }
       });
-      expect(missingKeys.length, `Missing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
+      expect(missingKeys.length, `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
+      const paramKeys = Object.keys(params);
+      expect(paramKeys.length, `\nUnexpected parameters exist: ${JSON.stringify(paramKeys)}`).to.equal(expectedParamKeys.length);
     });
   });
 
   describe('buildRequests', function() {
     it('should not return bid requests if optOut', function() {
       YieldbotAdapter._optOut = true;
-
-      const requests = YieldbotAdapter.buildRequests(_bidRequests);
+      const requests = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS);
       expect(requests.length).to.equal(0);
     });
-    it('sd', function() {});
-    it('sd', function() {});
-    it('sd', function() {});
-    it('sd', function() {});
+    it('should return a single request', function() {
+      const requests = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS);
+      expect(requests.length).to.equal(1);
+    });
+    it('should have expected server options', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const expectedOptions = {
+        withCredentials: true,
+        customHeaders: {
+          Accept: 'application/json'
+        }
+      };
+      expect(request.options).to.eql(expectedOptions);
+    });
+    it('should be a GET request', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      expect(request.method).to.equal('GET');
+    });
+    it('should have bid request specific params', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      expect(request.data).to.not.equal(undefined);
 
+      const expectedParamKeys = [
+        'v',
+        'vi',
+        'si',
+        'pvi',
+        'pvd',
+        'lpvi',
+        'lo',
+        'r',
+        'sd',
+        'to',
+        'la',
+        'np',
+        'ua',
+        'sn',
+        'ssz',
+        'lpv',
+        'cts_ns',
+        'cts_js',
+        'cts_ini',
+        'e'
+      ];
+
+      const missingKeys = [];
+      expectedParamKeys.forEach((item) => {
+        if (item in request.data === false) {
+          missingKeys.push(item);
+        }
+      });
+      expect(missingKeys.length, `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
+
+    });
+
+    it.skip('should not have extra search parameters', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      expect(request.data).to.not.equal(undefined);
+      const expectedParamKeys = [
+        'v',
+        'vi',
+        'si',
+        'pvi',
+        'pvd',
+        'lpvi',
+        'lo',
+        'r',
+        'sd',
+        'to',
+        'la',
+        'np',
+        'ua',
+        'sn',
+        'ssz',
+        'lpv',
+        'cts_ns',
+        'cts_js',
+        'cts_ini',
+        'e'
+      ];
+
+      const paramKeys = Object.keys(request.data).sort();
+      expectedParamKeys.sort();
+    });
+
+    it('should have the correct bidUrl form', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      const bidUrl = '//i.yldbt.com/m/1234/v1/init';
+      expect(request.url).to.equal(bidUrl);
+    });
+
+    it('should set the bid request slot/bidId mapping', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      expect(request.yieldbotSlotParams).to.not.equal(undefined);
+      expect(request.yieldbotSlotParams.bidIdMap).to.not.equal(undefined);
+
+      const map = {};
+      map[request.data.pvi + ':leaderboard:728x90'] = '2240b2af6064bb';
+      map[request.data.pvi + ':medrec:300x250'] = '49d7fe5c3a15ed';
+      map[request.data.pvi + ':medrec:300x600'] = '332067957eaa33';
+      map[request.data.pvi + ':skyscraper:160x600'] = '49d7fe5c3a16ee';
+      expect(request.yieldbotSlotParams.bidIdMap).to.eql(map);
+    });
+
+    it('should set the bid request publisher number', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      expect(request.yieldbotSlotParams.psn).to.equal('1234');
+    });
+
+    it('should have unique slot name parameter', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      expect(request.yieldbotSlotParams.sn).to.equal('leaderboard|medrec|skyscraper');
+    });
+
+    it('should have slot sizes parameter', function() {
+      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
+      expect(request.yieldbotSlotParams.ssz).to.equal('728x90|300x600.300x250|160x600');
+    });
   });
 
   describe.skip('TODO: functional buildRequests', function() {
@@ -582,8 +765,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
     it('should do something', function() {
       AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
-
-      console.log('bidRequests', _bidRequests);
       server.respondWith(
         [
           200,
@@ -591,7 +772,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
           JSON.stringify(serverResponse)
         ]
       );
-      AdapterManager.callBids(_adUnits, _bidRequests, () => {
+      AdapterManager.callBids(AD_UNITS, ADAPTER_BID_REQUESTS, () => {
         console.log('addBidResponse', arguments);
       }, () => {
         console.log('doneCb', arguments);
@@ -602,7 +783,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
     it('should do something else', function(done) {
       AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
 
-      const ret = AdapterManager.callBids(_adUnits, _bidRequests, () => {}, () => {
+      const ret = AdapterManager.callBids(AD_UNITS, ADAPTER_BID_REQUESTS, () => {}, () => {
         return () => {
           console.log('done', requests);
         };
