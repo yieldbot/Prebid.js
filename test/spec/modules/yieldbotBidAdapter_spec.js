@@ -333,7 +333,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
       const bidRequests = [bidLeaderboard728x90, bidMedrec300x600, bidMedrec300x250];
       const slotParams = YieldbotAdapter.getSlotRequestParams('f0e1d2c', bidRequests);
 
-      console.log(slotParams);
       expect(slotParams.psn).to.equal('1234');
       expect(slotParams.sn).to.equal('leaderboard|medrec');
       expect(slotParams.ssz).to.equal('728x90|300x600.300x250');
@@ -721,7 +720,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
       expect(missingKeys.length, `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
       expect(extraKeys.length, `\nExpected: ${expectedParamKeys}\nExtra keys: ${JSON.stringify(extraKeys)}`).to.equal(0);
-
     });
 
     it('should have the correct bidUrl form', function() {
