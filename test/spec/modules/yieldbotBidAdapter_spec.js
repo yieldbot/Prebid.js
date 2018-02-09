@@ -389,9 +389,9 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
     it('should build slot bid request parameters in order of bidRequests', function() {
       const bidRequests = [
-        FIXTURE_BIDS.BID_MEDREC_300x250,
+        FIXTURE_BIDS.BID_MEDREC_300x600,
         FIXTURE_BIDS.BID_LEADERBOARD_728x90,
-        FIXTURE_BIDS.BID_MEDREC_300x600
+        FIXTURE_BIDS.BID_MEDREC_300x250
       ];
 
       const slotParams = YieldbotAdapter.getSlotRequestParams('f0e1d2c', bidRequests);
@@ -413,7 +413,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
     it('should exclude slot bid requests with malformed sizes', function() {
       const bid = FIXTURE_BIDS.BID_MEDREC_300x250;
       bid.sizes = ['300x250'];
-      const bidRequests = [bid, bidLeaderboard728x90];
+      const bidRequests = [bid, FIXTURE_BIDS.BID_LEADERBOARD_728x90];
       const slotParams = YieldbotAdapter.getSlotRequestParams('affffffe', bidRequests);
       expect(slotParams.psn).to.equal('1234');
       expect(slotParams.sn).to.equal('leaderboard');
@@ -691,8 +691,14 @@ describe('Yieldbot Adapter Unit Tests', function() {
         }
       });
 
-      expect(missingKeys.length, `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
-      expect(extraKeys.length, `\nExpected: ${expectedParamKeys}\nExtra keys: ${JSON.stringify(extraKeys)}`).to.equal(0);
+      expect(
+        missingKeys.length,
+        `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`)
+        .to.equal(0);
+      expect(
+        extraKeys.length,
+        `\nExpected: ${expectedParamKeys}\nExtra keys: ${JSON.stringify(extraKeys)}`)
+        .to.equal(0);
     });
   });
 
@@ -761,8 +767,14 @@ describe('Yieldbot Adapter Unit Tests', function() {
         }
       });
 
-      expect(missingKeys.length, `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
-      expect(extraKeys.length, `\nExpected: ${expectedParamKeys}\nExtra keys: ${JSON.stringify(extraKeys)}`).to.equal(0);
+      expect(
+        missingKeys.length,
+        `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`)
+        .to.equal(0);
+      expect(
+        extraKeys.length,
+        `\nExpected: ${expectedParamKeys}\nExtra keys: ${JSON.stringify(extraKeys)}`)
+        .to.equal(0);
     });
 
     it('should have the correct bidUrl form', function() {
