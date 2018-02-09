@@ -651,7 +651,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
       const requests = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS);
       expect(requests.length).to.equal(0);
     });
-    it('should return a single request', function() {
+    it('should return a single BidRequest object', function() {
       const requests = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS);
       expect(requests.length).to.equal(1);
     });
