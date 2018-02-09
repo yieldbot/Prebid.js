@@ -42,7 +42,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
         psn: '1234',
         slot: 'medrec'
       },
-      adUnitCode: '/0000000/side-bar',
+      adUnitCode: '/0000000/medrec',
       transactionId:'3bcca099-e22a-4e1e-ab60-365a74a87c21',
       sizes: [[300, 250]],
       bidId: '49d7fe5c3a15ed',
@@ -63,8 +63,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
       bidderRequestId: '1e878e3676fb85',
       auctionId: 'c9964bd5-f835-4c91-916e-00295819f932'
     };
-
-  const ADAPTER_BID_REQUESTS = [BID_LEADERBOARD_728x90, BID_MEDREC_300x600, BID_MEDREC_300x250, BID_SKY160x600];
 
   const AD_UNITS = [
       {
@@ -205,11 +203,24 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
   let FIXTURE_SERVER_RESPONSE,
       FIXTURE_BID_REQUEST,
-      FIXTURE_BID_REQUESTS;
+      FIXTURE_BID_REQUESTS,
+      FIXTURE_BIDS;
   beforeEach(function() {
+    FIXTURE_BIDS = {
+      BID_LEADERBOARD_728x90: utils.deepClone(BID_LEADERBOARD_728x90),
+      BID_MEDREC_300x600: utils.deepClone(BID_MEDREC_300x600),
+      BID_MEDREC_300x250: utils.deepClone(BID_MEDREC_300x250),
+      BID_SKY160x600: utils.deepClone(BID_SKY160x600)
+    };
+
     FIXTURE_BID_REQUEST = utils.deepClone(INTERPRET_RESPONSE_BID_REQUEST);
     FIXTURE_SERVER_RESPONSE = utils.deepClone(INTERPRET_RESPONSE_SERVER_RESPONSE);
-    FIXTURE_BID_REQUESTS = utils.deepClone(ADAPTER_BID_REQUESTS);
+    FIXTURE_BID_REQUESTS = [
+      FIXTURE_BIDS.BID_LEADERBOARD_728x90,
+      FIXTURE_BIDS.BID_MEDREC_300x600,
+      FIXTURE_BIDS.BID_MEDREC_300x250,
+      FIXTURE_BIDS.BID_SKY160x600
+    ];
   });
 
   afterEach(function() {
@@ -451,7 +462,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
 
     it('should exclude slot bid requests with malformed sizes', function() {
-      const bid = utils.deepClone(bidMedrec300x250);
+      const bid = FIXTURE_BIDS.BID_MEDREC_300x250;
       bid.sizes = ['300x250'];
       const bidRequests = [bid, bidLeaderboard728x90];
       const slotParams = YieldbotAdapter.getSlotRequestParams('affffffe', bidRequests);
@@ -850,10 +861,8 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
 
     it('should not return Bids if no server response slot bids', function() {
-      const noBidsResponse = utils.deepClone(FIXTURE_SERVER_RESPONSE);
-      noBidsResponse.body.slots = [];
-
-      const responses = YieldbotAdapter.interpretResponse(noBidsResponse,
+      FIXTURE_SERVER_RESPONSE.body.slots = [];
+      const responses = YieldbotAdapter.interpretResponse(FIXTURE_SERVER_RESPONSE,
                                                           FIXTURE_BID_REQUEST);
       expect(responses.length).to.equal(0);
     });
