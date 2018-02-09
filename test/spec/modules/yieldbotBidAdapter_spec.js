@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import find from 'core-js/library/fn/array/find';
 import { YieldbotAdapter, spec } from 'modules/yieldbotBidAdapter';
 import { newBidder } from 'src/adapters/bidderFactory';
 import AdapterManager from 'src/adaptermanager';
@@ -620,6 +621,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
         'pvi',
         'pvd',
         'lpvi',
+        'bt',
         'lo',
         'r',
         'sd',
@@ -639,9 +641,16 @@ describe('Yieldbot Adapter Unit Tests', function() {
           missingKeys.push(item);
         }
       });
+      const extraKeys = [];
+      Object.keys(params).forEach((item) => {
+        if (!find(expectedParamKeys, param => param === item)) {
+          extraKeys.push(item);
+        }
+      });
+
       expect(missingKeys.length, `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
-      const paramKeys = Object.keys(params);
-      expect(paramKeys.length, `\nUnexpected parameters exist: ${JSON.stringify(paramKeys)}`).to.equal(expectedParamKeys.length);
+      expect(extraKeys.length, `\nExpected: ${expectedParamKeys}\nExtra keys: ${JSON.stringify(extraKeys)}`).to.equal(0);
+
     });
   });
 
@@ -680,6 +689,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
         'pvi',
         'pvd',
         'lpvi',
+        'bt',
         'lo',
         'r',
         'sd',
@@ -702,38 +712,16 @@ describe('Yieldbot Adapter Unit Tests', function() {
           missingKeys.push(item);
         }
       });
+      const extraKeys = [];
+      Object.keys(request.data).forEach((item) => {
+        if (!find(expectedParamKeys, param => param === item)) {
+          extraKeys.push(item);
+        }
+      });
+
       expect(missingKeys.length, `\nExpected: ${expectedParamKeys}\nMissing keys: ${JSON.stringify(missingKeys)}`).to.equal(0);
+      expect(extraKeys.length, `\nExpected: ${expectedParamKeys}\nExtra keys: ${JSON.stringify(extraKeys)}`).to.equal(0);
 
-    });
-
-    it.skip('should not have extra search parameters', function() {
-      const request = YieldbotAdapter.buildRequests(ADAPTER_BID_REQUESTS)[0];
-      expect(request.data).to.not.equal(undefined);
-      const expectedParamKeys = [
-        'v',
-        'vi',
-        'si',
-        'pvi',
-        'pvd',
-        'lpvi',
-        'lo',
-        'r',
-        'sd',
-        'to',
-        'la',
-        'np',
-        'ua',
-        'sn',
-        'ssz',
-        'lpv',
-        'cts_ns',
-        'cts_js',
-        'cts_ini',
-        'e'
-      ];
-
-      const paramKeys = Object.keys(request.data).sort();
-      expectedParamKeys.sort();
     });
 
     it('should have the correct bidUrl form', function() {
