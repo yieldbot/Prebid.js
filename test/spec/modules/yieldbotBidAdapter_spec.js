@@ -887,137 +887,171 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
-  describe.skip('TODO: functional buildRequests', function() {
-    let sandbox, server, xhr, requests;
-    beforeEach(function() {
-      sandbox = sinon.sandbox.create();
-      server = sinon.fakeServer.create();
-      server.respondImmediately = true;
-
-      xhr = sinon.useFakeXMLHttpRequest();
-      requests = [];
-      xhr.onCreate = function (xhr) {
-        requests.push(xhr);
-      };
-    });
-
-    afterEach(function() {
-      sandbox.restore();
-    });
-
-    const serverResponse = {
-      pvi: 'jdeqc5bigwlu083v48',
-      subdomain_iframe: 'ads-adseast-vpc',
-      url_prefix: 'http://ads-adseast-vpc.yldbt.com/m/',
-      integration_test: true,
-      slots: [
-        {
-          slot: 'leaderboard',
-          cpm: '800',
-          size: '728x90'
-        },
-        {
-          slot: 'medrec',
-          cpm: '300',
-          size: '300x250'
-        },
-        {
-          slot: 'medrec',
-          cpm: '800',
-          size: '300x600'
-        },
-        {
-          slot: 'skyscraper',
-          cpm: '300',
-          size: '160x600'
-        }
-      ]
-    };
-
-    it('should provide bidRequests for interpretResponse', function() {
-
-    });
-
-    it('should do something', function() {
-      AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
-      server.respondWith(
-        [
-          200,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify(serverResponse)
-        ]
-      );
-      AdapterManager.callBids(AD_UNITS, FIXTURE_BID_REQUESTS, () => {
-        console.log('addBidResponse', arguments);
-      }, () => {
-        console.log('doneCb', arguments);
-      });
-      console.log('server.requests', server.requests);
-    });
-
-    it('should do something else', function(done) {
-      AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
-
-      const ret = AdapterManager.callBids(AD_UNITS, FIXTURE_BID_REQUESTS, () => {}, () => {
-        return () => {
-          console.log('done', requests);
-        };
-      });
-
-      requests[0].respond(
-        200,
-        { 'Content-Type': 'application/json' },
-        JSON.stringify(serverResponse));
-
-      done();
-    });
-  });
-
   describe('callBids', function() {
-    let sandbox, server, xhr, requests;
+    let sandbox, server, xhr, fakeRequests, requestAssertions, eventAssertions, auctionBids;
     beforeEach(function() {
       sandbox = sinon.sandbox.create();
       server = sinon.fakeServer.create();
       server.respondImmediately = true;
 
       xhr = sinon.useFakeXMLHttpRequest();
-      requests = [];
+      fakeRequests = [];
       xhr.onCreate = function (xhr) {
-        requests.push(xhr);
+        fakeRequests.push(xhr);
       };
+      requestAssertions = [];
+      eventAssertions = [];
+      auctionBids = [];
     });
 
     afterEach(function() {
       sandbox.restore();
     });
 
-    it.only('should build bids from response', function(done) {
-      AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
-
-      events.on('bidResponse', (event) => {
-        console.log('Bid', event);
-      });
-      events.on('auctionEnd', (event) => {
-        console.log('AuctionEnd', event);
-      });
-
-      const auction = auctionManager.createAuction(
-        {
-          adUnits: FIXTURE_AD_UNITS,
-          adUnitCodes: FIXTURE_AD_UNITS.map(unit => unit.code),
-          callback: () => {
-            const url = urlParse(requests[0].url, { noDecodeWholeURL: true });
-            console.log('done', url, requests);
-            done();
+    function auctionDetails(auctionCount, adUnits, adUnitCodes, requestCb, done) {
+      const cb = () => {
+        if (requestCb) {
+          try {
+            requestCb(fakeRequests[auctionCount]);
+          } catch (err) {
+            console.log('assert here');
+            requestAssertions.push(err);
           }
         }
-      );
-      auction.callBids();
 
-      requests[0].respond(
+        const checkAssertions = (err) => {
+          if (!done) {
+            throw err;
+          }
+          done(err);
+        };
+        requestAssertions.forEach(checkAssertions);
+        eventAssertions.forEach(checkAssertions);
+        if (done) {
+          done();
+        }
+      };
+      return {
+        adUnits: adUnits,
+        adUnitCodes: adUnitCodes,
+        callback: cb
+      };
+    };
+
+    AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
+    const AUCTIONS = { FIRST: 0, SECOND: 1 };
+    it.only('should build bids', function(done) {
+      events.on('bidResponse', (event) => {
+        try {
+          auctionBids.push(event);
+        } catch (err) {
+          eventAssertions.push(err);
+        }
+      });
+
+      const firstAdUnits = FIXTURE_AD_UNITS;
+      const firstAdUnitCodes = FIXTURE_AD_UNITS.map(unit => unit.code);
+      const firstAuction = auctionManager.createAuction(
+        auctionDetails(
+          AUCTIONS.FIRST,
+          firstAdUnits,
+          firstAdUnitCodes,
+          (request) => {
+            const url = urlParse(
+              request.url,
+              { noDecodeWholeURL: true }
+            );
+            const bidType = url.search[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_TYPE];
+            expect(bidType, 'Bid type').to.equal('init');
+
+            const slots = url.search[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME];
+            expect(
+              decodeURIComponent(slots), 'Slot names')
+              .to.equal('leaderboard|medrec|skyscraper');
+
+            const sizes = url.search[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE];
+            expect(
+              decodeURIComponent(sizes), 'Slot sizes')
+              .to.equal('728x90|300x250.300x600|160x600');
+          },
+          done
+        )
+      );
+      firstAuction.callBids();
+
+      fakeRequests[AUCTIONS.FIRST].respond(
         200,
         { 'Content-Type': 'application/json' },
-        JSON.stringify(FIXTURE_SERVER_RESPONSE.body));
+        JSON.stringify(FIXTURE_SERVER_RESPONSE.body)
+      );
+
+      expect(auctionBids.length, 'Auction bids').to.equal(4);
+    });
+
+    it('should build refresh bids', function(done) {
+      events.on('bidResponse', (event) => {
+        try {
+          auctionBids.push(event);
+        } catch (err) {
+          eventAssertions.push(err);
+        }
+      });
+
+      const firstAdUnits = FIXTURE_AD_UNITS;
+      const firstAdUnitCodes = FIXTURE_AD_UNITS.map(unit => unit.code);
+      const firstAuction = auctionManager.createAuction(
+        auctionDetails(
+          AUCTIONS.FIRST,
+          firstAdUnits,
+          firstAdUnitCodes,
+          (request) => {
+            const url = urlParse(
+              request.url,
+              { noDecodeWholeURL: true }
+            );
+            const searchParams = url.search;
+            expect(searchParams.bt, 'Bid type').to.equal('init');
+          }
+        )
+      );
+      firstAuction.callBids();
+
+      fakeRequests[AUCTIONS.FIRST].respond(
+        200,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify(FIXTURE_SERVER_RESPONSE.body)
+      );
+
+      expect(auctionBids.length).to.equal(4);
+
+      const secondAdUnits = FIXTURE_AD_UNITS;
+      const secondAdUnitCodes = FIXTURE_AD_UNITS.map(unit => unit.code);
+      const secondAuction = auctionManager.createAuction(
+        auctionDetails(
+          AUCTIONS.SECOND,
+          secondAdUnits,
+          secondAdUnitCodes,
+          (request) => {
+            const url = urlParse(
+              request.url,
+              { noDecodeWholeURL: true }
+            );
+            const searchParams = url.search;
+            expect(searchParams.bt, 'Bid type').to.equal('refresh');
+          },
+          done
+        )
+      );
+      secondAuction.callBids();
+
+      fakeRequests[AUCTIONS.SECOND].respond(
+        200,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify(FIXTURE_SERVER_RESPONSE.body)
+      );
+
+      events.off('bidResponse');
+      expect(auctionBids.length).to.equal(4);
     });
   });
 });
