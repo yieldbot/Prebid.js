@@ -887,8 +887,9 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
-  describe('callBids', function() {
-    let sandbox, server, xhr, fakeRequests, requestAssertions, eventAssertions, auctionBids;
+  describe.only('callBids', function() {
+    AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
+    let sandbox, server, xhr, fakeRequests;
     beforeEach(function() {
       sandbox = sinon.sandbox.create();
       server = sinon.fakeServer.create();
@@ -899,36 +900,24 @@ describe('Yieldbot Adapter Unit Tests', function() {
       xhr.onCreate = function (xhr) {
         fakeRequests.push(xhr);
       };
-      requestAssertions = [];
-      eventAssertions = [];
-      auctionBids = [];
     });
 
     afterEach(function() {
       sandbox.restore();
+      YieldbotAdapter._bidRequestCount = 0;
     });
 
-    function auctionDetails(auctionCount, adUnits, adUnitCodes, requestCb, done) {
+    function auctionDetails(auctionCount, adUnits, adUnitCodes, requestCb, done, quit) {
       const cb = () => {
         if (requestCb) {
           try {
             requestCb(fakeRequests[auctionCount]);
+            if (quit) {
+              done();
+            }
           } catch (err) {
-            console.log('assert here');
-            requestAssertions.push(err);
+            done(err);
           }
-        }
-
-        const checkAssertions = (err) => {
-          if (!done) {
-            throw err;
-          }
-          done(err);
-        };
-        requestAssertions.forEach(checkAssertions);
-        eventAssertions.forEach(checkAssertions);
-        if (done) {
-          done();
         }
       };
       return {
@@ -938,16 +927,24 @@ describe('Yieldbot Adapter Unit Tests', function() {
       };
     };
 
-    AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
     const AUCTIONS = { FIRST: 0, SECOND: 1 };
-    it.only('should build bids', function(done) {
-      events.on('bidResponse', (event) => {
+    it('should build bids', function(done) {
+      const auctionBids = [];
+      const bidResponseHandler = (event) => {
+        auctionBids.push(event);
+      };
+      const auctionEndHandler = (event) => {
         try {
-          auctionBids.push(event);
+          events.off('bidResponse', bidResponseHandler);
+          events.off('auctionEnd', auctionEndHandler);
+          expect(auctionBids.length, 'Auction bids').to.equal(4);
+          done();
         } catch (err) {
-          eventAssertions.push(err);
+          done(err);
         }
-      });
+      };
+      events.on('bidResponse', bidResponseHandler);
+      events.on('auctionEnd', auctionEndHandler);
 
       const firstAdUnits = FIXTURE_AD_UNITS;
       const firstAdUnitCodes = FIXTURE_AD_UNITS.map(unit => unit.code);
@@ -955,48 +952,71 @@ describe('Yieldbot Adapter Unit Tests', function() {
         auctionDetails(
           AUCTIONS.FIRST,
           firstAdUnits,
-          firstAdUnitCodes,
-          (request) => {
-            const url = urlParse(
-              request.url,
-              { noDecodeWholeURL: true }
-            );
-            const bidType = url.search[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_TYPE];
-            expect(bidType, 'Bid type').to.equal('init');
-
-            const slots = url.search[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_NAME];
-            expect(
-              decodeURIComponent(slots), 'Slot names')
-              .to.equal('leaderboard|medrec|skyscraper');
-
-            const sizes = url.search[YieldbotAdapter.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE];
-            expect(
-              decodeURIComponent(sizes), 'Slot sizes')
-              .to.equal('728x90|300x250.300x600|160x600');
-          },
-          done
+          firstAdUnitCodes
         )
       );
       firstAuction.callBids();
+      fakeRequests[AUCTIONS.FIRST].respond(
+        200,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify(FIXTURE_SERVER_RESPONSE.body)
+      );
+    });
 
+    it('should build multiple auction bids', function(done) {
+      const auctionBids = [];
+      let auctionCount = 0;
+      const bidResponseHandler = (event) => { auctionBids.push(event); };
+      const auctionEndHandler = (event) => {
+        try {
+          auctionCount++;
+          if (auctionCount === 2) {
+            events.off('bidResponse', bidResponseHandler);
+            events.off('auctionEnd', auctionEndHandler);
+            expect(auctionBids.length, 'Auction bids').to.equal(8);
+            done();
+          }
+        } catch (err) {
+          done(err);
+        }
+      };
+      events.on('bidResponse', bidResponseHandler);
+      events.on('auctionEnd', auctionEndHandler);
+
+      const firstAdUnits = FIXTURE_AD_UNITS;
+      const firstAdUnitCodes = FIXTURE_AD_UNITS.map(unit => unit.code);
+      const firstAuction = auctionManager.createAuction(
+        auctionDetails(
+          AUCTIONS.FIRST,
+          firstAdUnits,
+          firstAdUnitCodes
+        )
+      );
+      firstAuction.callBids();
       fakeRequests[AUCTIONS.FIRST].respond(
         200,
         { 'Content-Type': 'application/json' },
         JSON.stringify(FIXTURE_SERVER_RESPONSE.body)
       );
 
-      expect(auctionBids.length, 'Auction bids').to.equal(4);
+      const secondAdUnits = FIXTURE_AD_UNITS;
+      const secondAdUnitCodes = FIXTURE_AD_UNITS.map(unit => unit.code);
+      const secondAuction = auctionManager.createAuction(
+        auctionDetails(
+          AUCTIONS.SECOND,
+          secondAdUnits,
+          secondAdUnitCodes
+        )
+      );
+      secondAuction.callBids();
+      fakeRequests[AUCTIONS.SECOND].respond(
+        200,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify(FIXTURE_SERVER_RESPONSE.body)
+      );
     });
 
-    it('should build refresh bids', function(done) {
-      events.on('bidResponse', (event) => {
-        try {
-          auctionBids.push(event);
-        } catch (err) {
-          eventAssertions.push(err);
-        }
-      });
-
+    it('should have init or refresh bid types', function(done) {
       const firstAdUnits = FIXTURE_AD_UNITS;
       const firstAdUnitCodes = FIXTURE_AD_UNITS.map(unit => unit.code);
       const firstAuction = auctionManager.createAuction(
@@ -1004,25 +1024,24 @@ describe('Yieldbot Adapter Unit Tests', function() {
           AUCTIONS.FIRST,
           firstAdUnits,
           firstAdUnitCodes,
-          (request) => {
+          (request, done) => {
             const url = urlParse(
               request.url,
               { noDecodeWholeURL: true }
             );
             const searchParams = url.search;
-            expect(searchParams.bt, 'Bid type').to.equal('init');
-          }
+            expect(searchParams.bt, 'First auction bid type').to.equal('init');
+          },
+          done,
+          false
         )
       );
       firstAuction.callBids();
-
       fakeRequests[AUCTIONS.FIRST].respond(
         200,
         { 'Content-Type': 'application/json' },
         JSON.stringify(FIXTURE_SERVER_RESPONSE.body)
       );
-
-      expect(auctionBids.length).to.equal(4);
 
       const secondAdUnits = FIXTURE_AD_UNITS;
       const secondAdUnitCodes = FIXTURE_AD_UNITS.map(unit => unit.code);
@@ -1037,21 +1056,18 @@ describe('Yieldbot Adapter Unit Tests', function() {
               { noDecodeWholeURL: true }
             );
             const searchParams = url.search;
-            expect(searchParams.bt, 'Bid type').to.equal('refresh');
+            expect(searchParams.bt, 'Second auction bid type').to.equal('refresh');
           },
-          done
+          done,
+          true
         )
       );
       secondAuction.callBids();
-
       fakeRequests[AUCTIONS.SECOND].respond(
         200,
         { 'Content-Type': 'application/json' },
         JSON.stringify(FIXTURE_SERVER_RESPONSE.body)
       );
-
-      events.off('bidResponse');
-      expect(auctionBids.length).to.equal(4);
     });
   });
 });
