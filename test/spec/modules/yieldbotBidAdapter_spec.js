@@ -198,7 +198,11 @@ describe('Yieldbot Adapter Unit Tests', function() {
           size: '160x600'
         }
       ],
-      user_syncs: []
+      user_syncs: [
+        'https://usersync.dd9693a32aa1.com/00000000.gif?p=a',
+        'https://usersync.3b19503b37d8.com/00000000.gif?p=b',
+        'https://usersync.5cb389d36d30.com/00000000.gif?p=c'
+      ]
     },
     headers: {}
   };
@@ -887,6 +891,45 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
+  describe('getUserSyncs', function() {
+    let responses;
+    beforeEach(function () {
+      responses = [FIXTURE_SERVER_RESPONSE];
+    });
+    it('should return empty Array when server response property missing', function() {
+      delete responses[0].body.user_syncs;
+      const userSyncs = YieldbotAdapter.getUserSyncs({ pixelEnabled: true }, responses);
+      expect(userSyncs.length).to.equal(0);
+    });
+
+    it('should return empty Array when server response property is empty', function() {
+      responses[0].body.user_syncs = [];
+      const userSyncs = YieldbotAdapter.getUserSyncs({ pixelEnabled: true }, responses);
+      expect(userSyncs.length).to.equal(0);
+    });
+
+    it('should return empty Array pixel disabled', function() {
+      const userSyncs = YieldbotAdapter.getUserSyncs({ pixelEnabled: false }, responses);
+      expect(userSyncs.length).to.equal(0);
+    });
+
+    it('should return empty Array pixel option not provided', function() {
+      const userSyncs = YieldbotAdapter.getUserSyncs({ pixelNotHere: true }, responses);
+      expect(userSyncs.length).to.equal(0);
+    });
+
+    it('should return image type pixels', function() {
+      const userSyncs = YieldbotAdapter.getUserSyncs({ pixelEnabled: true }, responses);
+      expect(userSyncs).to.eql(
+        [
+          { type: 'image', url: 'https://usersync.dd9693a32aa1.com/00000000.gif?p=a' },
+          { type: 'image', url: 'https://usersync.3b19503b37d8.com/00000000.gif?p=b' },
+          { type: 'image', url: 'https://usersync.5cb389d36d30.com/00000000.gif?p=c' }
+        ]
+      );
+    });
+  });
+
   describe('Auctions', function() {
     AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
     let sandbox, server, xhr, fakeRequests;
@@ -900,6 +943,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
       xhr.onCreate = function (xhr) {
         fakeRequests.push(xhr);
       };
+      FIXTURE_SERVER_RESPONSE.user_syncs = [];
     });
 
     afterEach(function() {
@@ -1045,6 +1089,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
        */
       FIXTURE_AD_UNITS.shift();
       const FIXTURE_SERVER_RESPONSE_2 = utils.deepClone(FIXTURE_SERVER_RESPONSE);
+      FIXTURE_SERVER_RESPONSE_2.user_syncs = [];
       FIXTURE_SERVER_RESPONSE_2.body.slots.shift();
       FIXTURE_SERVER_RESPONSE_2.body.slots.forEach((bid, idx) => { const num = idx + 1; bid.cpm = `${num}${num}${num}`; });
       const secondAdUnits = FIXTURE_AD_UNITS;

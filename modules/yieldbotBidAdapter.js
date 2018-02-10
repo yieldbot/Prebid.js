@@ -340,7 +340,11 @@ export const YieldbotAdapter = {
    */
   getUserSyncs: function(syncOptions, serverResponses) {
     const userSyncs = [];
-    if (syncOptions.pixelEnabled && serverResponses.length > 0 && utils.isArray(serverResponses[0].body.user_syncs)) {
+    if (syncOptions.pixelEnabled &&
+        serverResponses.length > 0 &&
+        serverResponses[0].body &&
+        serverResponses[0].body.user_syncs &&
+        utils.isArray(serverResponses[0].body.user_syncs)) {
       const responseUserSyncs = serverResponses[0].body.user_syncs;
       responseUserSyncs.forEach((pixel) => {
         userSyncs.push({
