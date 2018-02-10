@@ -1,9 +1,12 @@
 import { expect } from 'chai';
 import find from 'core-js/library/fn/array/find';
-import { YieldbotAdapter, spec } from 'modules/yieldbotBidAdapter';
 import { newBidder } from 'src/adapters/bidderFactory';
 import AdapterManager from 'src/adaptermanager';
+import { auctionManager } from 'src/auctionManager';
 import * as utils from 'src/utils';
+import { parse as urlParse } from 'src/url';
+import events from 'src/events';
+import { YieldbotAdapter, spec } from 'modules/yieldbotBidAdapter';
 
 describe('Yieldbot Adapter Unit Tests', function() {
   const ALL_SEARCH_PARAMS = ['apie', 'bt', 'cb', 'cts_ad', 'cts_imp', 'cts_ini', 'cts_js', 'cts_ns', 'cts_rend', 'cts_res', 'e', 'ioa', 'it', 'la', 'lo', 'lpv', 'lpvi', 'mtp', 'np', 'pvd', 'pvi', 'r', 'ri', 'sb', 'sd', 'si', 'slot', 'sn', 'ssz', 'to', 'ua', 'v', 'vi'];
@@ -200,8 +203,9 @@ describe('Yieldbot Adapter Unit Tests', function() {
     headers: {}
   };
 
-  let FIXTURE_SERVER_RESPONSE, FIXTURE_BID_REQUEST, FIXTURE_BID_REQUESTS, FIXTURE_BIDS;
+  let FIXTURE_AD_UNITS, FIXTURE_SERVER_RESPONSE, FIXTURE_BID_REQUEST, FIXTURE_BID_REQUESTS, FIXTURE_BIDS;
   beforeEach(function() {
+    FIXTURE_AD_UNITS = utils.deepClone(AD_UNITS);
     FIXTURE_BIDS = {
       BID_LEADERBOARD_728x90: utils.deepClone(BID_LEADERBOARD_728x90),
       BID_MEDREC_300x600: utils.deepClone(BID_MEDREC_300x600),
@@ -969,34 +973,51 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
-  describe.skip('TODO: functional interpretResponse', () => {
-    const ybotResponse = {
-      pvi: 'jbgxsxqxyxvqm2oud7',
-      subdomain_iframe: 'ads-adseast-vpc',
-      url_prefix: 'http://ads-adseast-vpc.yldbt.com/m/',
-      integration_test: true,
-      warnings: [],
-      slots: [
-        {
-          slot: 'medrec',
-          cpm: '300',
-          size: '300x250'
-        }, {
-          slot: 'leaderboard',
-          cpm: '800',
-          size: '728x90'
-        }
-      ]
-    };
+  describe('callBids', function() {
+    let sandbox, server, xhr, requests;
+    beforeEach(function() {
+      sandbox = sinon.sandbox.create();
+      server = sinon.fakeServer.create();
+      server.respondImmediately = true;
 
-    it('should build bids from response', function() {
-
+      xhr = sinon.useFakeXMLHttpRequest();
+      requests = [];
+      xhr.onCreate = function (xhr) {
+        requests.push(xhr);
+      };
     });
-  });
 
-  describe.skip('test stuff', function() {
-    it('some stuff', function() {
-      expect([]).to.deep.equal([]);
+    afterEach(function() {
+      sandbox.restore();
+    });
+
+    it.only('should build bids from response', function(done) {
+      AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
+
+      events.on('bidResponse', (event) => {
+        console.log('Bid', event);
+      });
+      events.on('auctionEnd', (event) => {
+        console.log('AuctionEnd', event);
+      });
+
+      const auction = auctionManager.createAuction(
+        {
+          adUnits: FIXTURE_AD_UNITS,
+          adUnitCodes: FIXTURE_AD_UNITS.map(unit => unit.code),
+          callback: () => {
+            const url = urlParse(requests[0].url, { noDecodeWholeURL: true });
+            console.log('done', url, requests);
+            done();
+          }
+        }
+      );
+      auction.callBids();
+
+      requests[0].respond(
+        200,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify(FIXTURE_SERVER_RESPONSE.body));
     });
   });
 });
