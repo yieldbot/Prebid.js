@@ -468,7 +468,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
-  describe('isSessionBlocked', function() {
+  describe('sessionBlocked', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.SESSION_BLOCKED;
     beforeEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
@@ -481,44 +481,61 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
     it('should return true if cookie value is interpreted as non-zero', function() {
       YieldbotAdapter.setCookie(cookieName, '1', YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked, 'cookie value: the string "1"').to.equal(true);
+      expect(YieldbotAdapter.sessionBlocked, 'cookie value: the string "1"').to.equal(true);
 
       YieldbotAdapter.setCookie(cookieName, '10.01', YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked, 'cookie value: the string "10.01"').to.equal(true);
+      expect(YieldbotAdapter.sessionBlocked, 'cookie value: the string "10.01"').to.equal(true);
 
       YieldbotAdapter.setCookie(cookieName, '-10.01', YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked, 'cookie value: the string "-10.01"').to.equal(true);
+      expect(YieldbotAdapter.sessionBlocked, 'cookie value: the string "-10.01"').to.equal(true);
 
       YieldbotAdapter.setCookie(cookieName, 1, YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked, 'cookie value: the number 1').to.equal(true);
+      expect(YieldbotAdapter.sessionBlocked, 'cookie value: the number 1').to.equal(true);
     });
 
     it('should return false if cookie name not found', function() {
-      expect(YieldbotAdapter.isSessionBlocked).to.equal(false);
+      expect(YieldbotAdapter.sessionBlocked).to.equal(false);
     });
 
     it('should return false if cookie value is interpreted as zero', function() {
       YieldbotAdapter.setCookie(cookieName, '0', YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked, 'cookie value: the string "0"').to.equal(false);
+      expect(YieldbotAdapter.sessionBlocked, 'cookie value: the string "0"').to.equal(false);
 
       YieldbotAdapter.setCookie(cookieName, '.01', YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked, 'cookie value: the string ".01"').to.equal(false);
+      expect(YieldbotAdapter.sessionBlocked, 'cookie value: the string ".01"').to.equal(false);
 
       YieldbotAdapter.setCookie(cookieName, '-.9', YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked, 'cookie value: the string "-.9"').to.equal(false);
+      expect(YieldbotAdapter.sessionBlocked, 'cookie value: the string "-.9"').to.equal(false);
 
       YieldbotAdapter.setCookie(cookieName, 0, YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked, 'cookie value: the number 0').to.equal(false);
+      expect(YieldbotAdapter.sessionBlocked, 'cookie value: the number 0').to.equal(false);
     });
 
     it('should return false if cookie value source is a non-numeric string', function() {
       YieldbotAdapter.setCookie(cookieName, 'true', YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked).to.equal(false);
+      expect(YieldbotAdapter.sessionBlocked).to.equal(false);
     });
 
     it('should return false if cookie value source is a boolean', function() {
       YieldbotAdapter.setCookie(cookieName, true, YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT, '/');
-      expect(YieldbotAdapter.isSessionBlocked).to.equal(false);
+      expect(YieldbotAdapter.sessionBlocked).to.equal(false);
+    });
+
+    it('should set sessionBlocked', function() {
+      YieldbotAdapter.sessionBlocked = true;
+      expect(YieldbotAdapter.sessionBlocked).to.equal(true);
+      YieldbotAdapter.sessionBlocked = false;
+      expect(YieldbotAdapter.sessionBlocked).to.equal(false);
+
+      YieldbotAdapter.sessionBlocked = 1;
+      expect(YieldbotAdapter.sessionBlocked).to.equal(true);
+      YieldbotAdapter.sessionBlocked = 0;
+      expect(YieldbotAdapter.sessionBlocked).to.equal(false);
+
+      YieldbotAdapter.sessionBlocked = '1';
+      expect(YieldbotAdapter.sessionBlocked).to.equal(true);
+      YieldbotAdapter.sessionBlocked = '';
+      expect(YieldbotAdapter.sessionBlocked).to.equal(false);
     });
   });
 
@@ -742,10 +759,34 @@ describe('Yieldbot Adapter Unit Tests', function() {
       const requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);
       expect(requests.length).to.equal(0);
     });
+
+    it('should not return bid requests if sessionBlocked', function() {
+      YieldbotAdapter.sessionBlocked = true;
+      const requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);
+      expect(requests.length).to.equal(0);
+      YieldbotAdapter.sessionBlocked = false;
+    });
+
+    it('should re-enable requests when sessionBlocked expires', function() {
+      const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.SESSION_BLOCKED;
+      YieldbotAdapter.setCookie(
+        cookieName,
+        1,
+        YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT,
+        '/');
+      let requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);
+      console.log(requests);
+      expect(requests.length).to.equal(0);
+      YieldbotAdapter.deleteCookie(cookieName);
+      requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);
+      expect(requests.length).to.equal(1);
+    });
+
     it('should return a single BidRequest object', function() {
       const requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);
       expect(requests.length).to.equal(1);
     });
+
     it('should have expected server options', function() {
       const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       const expectedOptions = {
@@ -756,10 +797,12 @@ describe('Yieldbot Adapter Unit Tests', function() {
       };
       expect(request.options).to.eql(expectedOptions);
     });
+
     it('should be a GET request', function() {
       const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.method).to.equal('GET');
     });
+
     it('should have bid request specific params', function() {
       const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.data).to.not.equal(undefined);
@@ -953,6 +996,14 @@ describe('Yieldbot Adapter Unit Tests', function() {
           { type: 'image', url: 'https://usersync.5cb389d36d30.com/00000000.gif?p=c' }
         ]
       );
+    });
+  });
+
+  describe('Session blocked', function() {
+    it('should not persist first party user cookie', function() {
+
+      FIXTURE_SERVER_RESPONSE.body.block_session = true;
+
     });
   });
 

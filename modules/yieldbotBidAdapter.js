@@ -142,11 +142,13 @@ export const YieldbotAdapter = {
   _bidRequestCount: 0,
   _pageviewDepth: 0,
   _lastPageviewId: '',
+  _sessionBlocked: false,
   _isInitialized: false,
 
   initialize: function() {
     if (!this._isInitialized) {
       this._pageviewDepth = this.pageviewDepth;
+      this._sessionBlocked = this.sessionBlocked;
       this._isInitialized = true;
     }
   },
@@ -161,13 +163,21 @@ export const YieldbotAdapter = {
    * @memberof module:YieldbotBidAdapter
    * @private
    */
-  get isSessionBlocked() {
+  get sessionBlocked() {
     const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_BLOCKED;
     const cookieValue = this.getCookie(cookieName);
     const sessionBlocked = cookieValue ? parseInt(cookieValue, 10) || 0 : 0;
     if (sessionBlocked) {
       this.setCookie(cookieName, 1, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     }
+    this._sessionBlocked = !!sessionBlocked;
+    return this._sessionBlocked;
+  },
+
+  set sessionBlocked(blockSession) {
+    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_BLOCKED;
+    const sessionBlocked = !!blockSession ? 1 : 0;
+    this.setCookie(cookieName, sessionBlocked, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     return !!sessionBlocked;
   },
 
@@ -294,7 +304,7 @@ export const YieldbotAdapter = {
    */
   buildRequests: function(bidRequests) {
     const requests = [];
-    if (!this._optOut) {
+    if (!this._optOut && !this.sessionBlocked) {
       const searchParams = this.initBidRequestParams();
       this._bidRequestCount++;
 
@@ -375,7 +385,7 @@ export const YieldbotAdapter = {
     const bidResponses = [];
     const responseBody = serverResponse && serverResponse.body ? serverResponse.body : {};
     this._optOut = responseBody.optout || false;
-    if (!this.optOut) {
+    if (!this._optOut && !this._sessionBlocked) {
       const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : [];
       slotBids.forEach((bid) => {
         if (bid.slot && bid.size && bid.cpm) {
