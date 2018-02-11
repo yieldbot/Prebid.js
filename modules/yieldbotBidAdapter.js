@@ -23,6 +23,7 @@ export const YieldbotAdapter = {
    * @property {string} REQUEST_API_VERSION Yieldbot request API Url path parameter
    * @property {string} REQUEST_API_PATH_BID Yieldbot bid request API path component
    * @property {string} REQUEST_API_PATH_CREATIVE Yieldbot ad markup request API path component
+   * @property {string} REQUEST_API_PATH_IMRESSION Yieldbot ad impression request API path component
    * @property {string} REQUEST_PARAMS_TERMINATOR Yieldbot request query parameters termination character
    * @property {number} USER_ID_TIMEOUT
    * @property {number} VISIT_ID_TIMEOUT
@@ -63,6 +64,7 @@ export const YieldbotAdapter = {
    * @property {string} REQUEST_PARAMS.CALLBACK Ad creative render callback
    * @property {string} REQUEST_PARAMS.SESSION_BLOCKED Yieldbot ads blocked by user opt-out or suspicious activity detected during session
    * @property {string} [REQUEST_PARAMS.ADAPTER_ERROR] Yieldbot error description parameter
+   * @property {string} [REQUEST_PARAMS.TERMINATOR] Yieldbot search parameters terminator
    * @property {object} COOKIES Cookie name suffixes set by Yieldbot. See also <code>YieldbotAdapter._COOKIE_PREFIX</code>
    * @property {string} COOKIES.SESSION_BLOCKED The user session is blocked for bids
    * @property {string} COOKIES.SESSION_ID The user session identifier
