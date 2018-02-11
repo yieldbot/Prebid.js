@@ -620,6 +620,32 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
+  describe('pageviewDepth', function() {
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.PAGEVIEW_DEPTH;
+
+    beforeEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+    });
+
+    afterEach(function() {
+      YieldbotAdapter.deleteCookie(cookieName);
+      expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
+    });
+
+    it('should return one (1) if cookie does not exist', function() {
+      const pageviewDepth = YieldbotAdapter.pageviewDepth;
+      expect(pageviewDepth).to.equal(1);
+    });
+
+    it('should increment the integer string for depth', function() {
+      let pageviewDepth = YieldbotAdapter.pageviewDepth;
+      expect(pageviewDepth).to.equal(1);
+
+      pageviewDepth = YieldbotAdapter.pageviewDepth;
+      expect(pageviewDepth).to.equal(2);
+    });
+  });
+
   describe('urlPrefix', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.URL_PREFIX;
 
