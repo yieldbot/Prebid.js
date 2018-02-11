@@ -469,7 +469,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('sessionBlocked', function() {
-    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.SESSION_BLOCKED;
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.SESSION_BLOCKED;
     beforeEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
     });
@@ -540,7 +540,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('userId', function() {
-    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.USER_ID;
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.USER_ID;
     beforeEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
     });
@@ -564,7 +564,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('sessionId', function() {
-    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.SESSION_ID;
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.SESSION_ID;
     beforeEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
     });
@@ -588,7 +588,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('lastPageviewId', function() {
-    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
 
     beforeEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
@@ -613,7 +613,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('lastPageviewTime', function() {
-    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.PREVIOUS_VISIT;
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.PREVIOUS_VISIT;
 
     beforeEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
@@ -638,7 +638,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('pageviewDepth', function() {
-    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.PAGEVIEW_DEPTH;
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.PAGEVIEW_DEPTH;
 
     beforeEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
@@ -664,7 +664,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
   });
 
   describe('urlPrefix', function() {
-    const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.URL_PREFIX;
+    const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.URL_PREFIX;
 
     afterEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
@@ -768,7 +768,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
 
     it('should re-enable requests when sessionBlocked expires', function() {
-      const cookieName = YieldbotAdapter.CONSTANTS.COOKIE_PREFIX + YieldbotAdapter.CONSTANTS.COOKIES.SESSION_BLOCKED;
+      const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.SESSION_BLOCKED;
       YieldbotAdapter.setCookie(
         cookieName,
         1,

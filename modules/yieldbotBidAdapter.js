@@ -18,8 +18,7 @@ export const YieldbotAdapter = {
    * @memberof module:YieldbotBidAdapter
    * @property {string} VERSION Yieldbot adapter version string: <pre>'pbjs-{major}.{minor}.{patch}'</pre>
    * @property {string} CURRENCY 3-letter ISO 4217 code defining the currency of the bid
-   * @property {boolean} NET_REVENUE Bid value is net or gross. True = Net.e
-
+   * @property {boolean} NET_REVENUE Bid value is net or gross. True = Net
    * @property {string} DEFAULT_REQUEST_URL_PREFIX Request Url prefix to use when ad server response has not provided availability zone specific prefix
    * @property {string} REQUEST_API_VERSION Yieldbot request API Url path parameter
    * @property {string} REQUEST_API_PATH_BID Yieldbot bid request API path component
@@ -28,7 +27,6 @@ export const YieldbotAdapter = {
    * @property {number} USER_ID_TIMEOUT
    * @property {number} VISIT_ID_TIMEOUT
    * @property {number} SESSION_ID_TIMEOUT
-   * @property {string} COOKIE_PREFIX Prefix string of first-party cookies set by Yieldbot
    * @property {object} IFRAME_TYPE the iFrame type in which a ad markup request is made
    * @property {string} IFRAME_TYPE.NONE not in an iFrame
    * @property {string} IFRAME_TYPE.SAME_ORIGIN in an iFrame with the same origin aka "friendly"
@@ -65,7 +63,7 @@ export const YieldbotAdapter = {
    * @property {string} REQUEST_PARAMS.CALLBACK Ad creative render callback
    * @property {string} REQUEST_PARAMS.SESSION_BLOCKED Yieldbot ads blocked by user opt-out or suspicious activity detected during session
    * @property {string} [REQUEST_PARAMS.ADAPTER_ERROR] Yieldbot error description parameter
-   * @property {object} COOKIES Cookie name suffixes set by Yieldbot. See also <code>CONSTANTS.COOKIE_PREFIX</code>
+   * @property {object} COOKIES Cookie name suffixes set by Yieldbot. See also <code>YieldbotAdapter._COOKIE_PREFIX</code>
    * @property {string} COOKIES.SESSION_BLOCKED The user session is blocked for bids
    * @property {string} COOKIES.SESSION_ID The user session identifier
    * @property {string} COOKIES.PAGEVIEW_DEPTH The session pageview depth
@@ -88,7 +86,6 @@ export const YieldbotAdapter = {
     USER_ID_TIMEOUT: 2592000000,
     VISIT_ID_TIMEOUT: 2592000000,
     SESSION_ID_TIMEOUT: 180000,
-    COOKIE_PREFIX: '__ybot_',
     IFRAME_TYPE: {
       NONE: 'none',
       SAME_ORIGIN: 'so',
@@ -130,13 +127,13 @@ export const YieldbotAdapter = {
       TERMINATOR: 'e'
     },
     COOKIES: {
-      SESSION_BLOCKED: 'n',
-      SESSION_ID: 'si',
-      PAGEVIEW_DEPTH: 'pvd',
-      USER_ID: 'vi',
-      LAST_PAGEVIEW_ID: 'lpvi',
-      PREVIOUS_VISIT: 'v',
-      URL_PREFIX: 'c'
+      SESSION_BLOCKED: '__ybot_n',
+      SESSION_ID: '__ybot_si',
+      PAGEVIEW_DEPTH: '__ybot_pvd',
+      USER_ID: '__ybot_vi',
+      LAST_PAGEVIEW_ID: '__ybot_lpvi',
+      PREVIOUS_VISIT: '__ybot_v',
+      URL_PREFIX: '__ybot_c'
     }
   },
   _bidRequestCount: 0,
@@ -164,7 +161,7 @@ export const YieldbotAdapter = {
    * @private
    */
   get sessionBlocked() {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_BLOCKED;
+    const cookieName = this.CONSTANTS.COOKIES.SESSION_BLOCKED;
     const cookieValue = this.getCookie(cookieName);
     const sessionBlocked = cookieValue ? parseInt(cookieValue, 10) || 0 : 0;
     if (sessionBlocked) {
@@ -175,14 +172,14 @@ export const YieldbotAdapter = {
   },
 
   set sessionBlocked(blockSession) {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_BLOCKED;
+    const cookieName = this.CONSTANTS.COOKIES.SESSION_BLOCKED;
     const sessionBlocked = !!blockSession ? 1 : 0;
     this.setCookie(cookieName, sessionBlocked, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     return !!sessionBlocked;
   },
 
   get userId() {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.USER_ID;
+    const cookieName = this.CONSTANTS.COOKIES.USER_ID;
     let cookieValue = this.getCookie(cookieName);
     if (!cookieValue) {
       cookieValue = this.newId();
@@ -192,7 +189,7 @@ export const YieldbotAdapter = {
   },
 
   get sessionId() {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.SESSION_ID;
+    const cookieName = this.CONSTANTS.COOKIES.SESSION_ID;
     let cookieValue = this.getCookie(cookieName);
     if (!cookieValue) {
       cookieValue = this.newId();
@@ -202,7 +199,7 @@ export const YieldbotAdapter = {
   },
 
   get pageviewDepth() {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.PAGEVIEW_DEPTH;
+    const cookieName = this.CONSTANTS.COOKIES.PAGEVIEW_DEPTH;
     let cookieValue = parseInt(this.getCookie(cookieName), 10) || 0;
     cookieValue++;
     this.setCookie(cookieName, cookieValue, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
@@ -210,24 +207,24 @@ export const YieldbotAdapter = {
   },
 
   get lastPageviewId() {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
+    const cookieName = this.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
     let cookieValue = this.getCookie(cookieName);
     return cookieValue || '';
   },
 
   set lastPageviewId(id) {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
+    const cookieName = this.CONSTANTS.COOKIES.LAST_PAGEVIEW_ID;
     return this.setCookie(cookieName, id, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
   },
 
   get lastPageviewTime() {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.PREVIOUS_VISIT;
+    const cookieName = this.CONSTANTS.COOKIES.PREVIOUS_VISIT;
     let cookieValue = this.getCookie(cookieName);
     return cookieValue ? parseInt(cookieValue, 10) : 0;
   },
 
   set lastPageviewTime(ts) {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.PREVIOUS_VISIT;
+    const cookieName = this.CONSTANTS.COOKIES.PREVIOUS_VISIT;
     return this.setCookie(cookieName, ts, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
   },
 
@@ -238,7 +235,7 @@ export const YieldbotAdapter = {
    * @memberof module:YieldbotBidAdapter
    */
   urlPrefix: function(prefix) {
-    const cookieName = this.CONSTANTS.COOKIE_PREFIX + this.CONSTANTS.COOKIES.URL_PREFIX;
+    const cookieName = this.CONSTANTS.COOKIES.URL_PREFIX;
     let cookieValue = prefix || this.getCookie(cookieName);
     if (!cookieValue) {
       cookieValue = this.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX;
