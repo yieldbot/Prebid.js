@@ -468,6 +468,27 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
+  describe('clearAllcookies', function() {
+    it('should delete all first-party cookies', function() {
+      for (let cookieName in YieldbotAdapter.CONSTANTS.COOKIES) {
+        YieldbotAdapter.setCookie(cookieName, 1, YieldbotAdapter.CONSTANTS.USER_ID_TIMEOUT, '/');
+      };
+
+      let cookieName, cookieValue;
+      for (cookieName in YieldbotAdapter.CONSTANTS.COOKIES) {
+        cookieValue = YieldbotAdapter.getCookie(cookieName);
+        expect(!!cookieValue).to.equal(true);
+      };
+
+      YieldbotAdapter.clearAllCookies();
+
+      for (cookieName in YieldbotAdapter.CONSTANTS.COOKIES) {
+        cookieValue = YieldbotAdapter.getCookie(cookieName);
+        expect(cookieValue).to.equal(null);
+      }
+    });
+  });
+
   describe('sessionBlocked', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.SESSION_BLOCKED;
     beforeEach(function() {
@@ -999,15 +1020,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
     });
   });
 
-  describe('Session blocked', function() {
-    it('should not persist first party user cookie', function() {
-
-      FIXTURE_SERVER_RESPONSE.body.block_session = true;
-
-    });
-  });
-
-  describe('Auctions', function() {
+  describe('Auction Behavior', function() {
     AdapterManager.bidderRegistry['yieldbot'] = newBidder(spec);
     let sandbox, server, xhr, fakeRequests;
     beforeEach(function() {

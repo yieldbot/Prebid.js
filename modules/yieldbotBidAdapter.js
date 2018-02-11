@@ -173,7 +173,7 @@ export const YieldbotAdapter = {
 
   set sessionBlocked(blockSession) {
     const cookieName = this.CONSTANTS.COOKIES.SESSION_BLOCKED;
-    const sessionBlocked = !!blockSession ? 1 : 0;
+    const sessionBlocked = blockSession ? 1 : 0;
     this.setCookie(cookieName, sessionBlocked, this.CONSTANTS.SESSION_ID_TIMEOUT, '/');
     return !!sessionBlocked;
   },
@@ -382,6 +382,9 @@ export const YieldbotAdapter = {
     const bidResponses = [];
     const responseBody = serverResponse && serverResponse.body ? serverResponse.body : {};
     this._optOut = responseBody.optout || false;
+    if (this._optOut) {
+      this.clearAllCookies();
+    }
     if (!this._optOut && !this._sessionBlocked) {
       const slotBids = responseBody.slots && responseBody.slots.length > 0 ? responseBody.slots : [];
       slotBids.forEach((bid) => {
@@ -718,6 +721,7 @@ export const YieldbotAdapter = {
     }
     return value;
   },
+
   setCookie: function(name, value, expireMillis, path, domain, secure) {
     const expireTime = expireMillis ? new Date(Date.now() + expireMillis).toGMTString() : '';
     const dataValue = encodeURIComponent(value);
@@ -728,9 +732,23 @@ export const YieldbotAdapter = {
     const cookieStr = `${name}=${dataValue};expires=${expireTime};path=${docLocation};domain=${pageDomain}${httpsOnly}`;
     document.cookie = cookieStr;
   },
+
   deleteCookie: function(name, path, domain, secure) {
     return this.setCookie(name, '', -1, path, domain, secure);
   },
+
+  /**
+   * Clear all first-party cookies.
+   * See [CONSTANTS.COOKIES]{@link module:YieldbotBidAdapter.CONSTANTS}.
+   */
+  clearAllCookies: function() {
+    for (let cookieName in this.CONSTANTS.COOKIES) {
+      if (this.CONSTANTS.COOKIES.hasOwnProperty(cookieName)) {
+        this.deleteCookie(cookieName);
+      }
+    }
+  },
+
   /**
    * Generate a new Yieldbot format id<br>
    * Base 36 and lowercase: <[ms] since epoch><[base36]{10}>
