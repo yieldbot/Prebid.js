@@ -375,6 +375,7 @@ export const YieldbotAdapter = {
    * Unpack the response from the server into a list of bids.
    *
    * @param {ServerResponse} serverResponse A successful response from the server.
+   * @param {BidRequest} bidRequest Request object submitted which produced the response.
    * @return {Bid[]} An array of bids which were nested inside the server.
    * @memberof module:YieldbotBidAdapter
    */
@@ -424,6 +425,23 @@ export const YieldbotAdapter = {
     return bidResponses;
   },
 
+  /**
+   * Initializes search parameters common to both ad request and impression Urls.
+   * @param {string} adRequestId Yieldbot ad request identifier
+   * @param {BidRequest} bidRequest The request that is the source of the impression
+   * @returns {object} Search parameter key/value pairs
+   * @memberof module:YieldbotBidAdapter
+   */
+  initAdRequestParams: function(adRequestId, bidRequest) {
+    let commonSearchParams = {};
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequest.data.vi || this.CONSTANTS.VERSION + '-vi';
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequest.data.si || this.CONSTANTS.VERSION + '-si';
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequest.data.pvi || this.CONSTANTS.VERSION + '-pvi';
+    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = adRequestId;
+    return commonSearchParams;
+  },
+
   buildAdUrl: function(urlPrefix, publisherNumber, commonSearchParams, bid) {
     const searchParams = Object.assign({}, commonSearchParams);
     searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_RESPONSE_TIME] = Date.now();
@@ -439,7 +457,7 @@ export const YieldbotAdapter = {
     return adUrl;
   },
 
-  buildImpressionUrl: function(urlPrefix, publisherNumber, commonSearchParams, bidRequestData) {
+  buildImpressionUrl: function(urlPrefix, publisherNumber, commonSearchParams) {
     const searchParams = Object.assign({}, commonSearchParams);
     const queryString = buildQueryString(searchParams) || '';
     const impressionUrl = urlPrefix +
@@ -447,7 +465,6 @@ export const YieldbotAdapter = {
             this.CONSTANTS.REQUEST_API_PATH_IMPRESSION +
             '?' +
             queryString;
-
     return impressionUrl;
   },
 
@@ -468,13 +485,7 @@ export const YieldbotAdapter = {
    */
   buildAdCreativeTag: function(urlPrefix, bid, bidRequest) {
     const ybotAdRequestId = this.newId();
-    const commonSearchParams = {};
-    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.ADAPTER_VERSION] = this.CONSTANTS.VERSION;
-    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.USER_ID] = bidRequest.data.vi || this.CONSTANTS.VERSION + '-vi';
-    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.SESSION_ID] = bidRequest.data.si || this.CONSTANTS.VERSION + '-si';
-    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.PAGEVIEW_ID] = bidRequest.data.pvi || this.CONSTANTS.VERSION + '-pvi';
-    commonSearchParams[this.CONSTANTS.REQUEST_PARAMS.AD_REQUEST_ID] = ybotAdRequestId;
-
+    const commonSearchParams = this.initAdRequestParams(ybotAdRequestId, bidRequest);
     const publisherNumber = bidRequest && bidRequest.yieldbotSlotParams ? bidRequest.yieldbotSlotParams.psn || '' : '';
     const adUrl = this.buildAdUrl(urlPrefix, publisherNumber, commonSearchParams, bid);
     const impressionUrl = this.buildImpressionUrl(urlPrefix, publisherNumber, commonSearchParams);

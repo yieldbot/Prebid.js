@@ -4,7 +4,7 @@ import { newBidder } from 'src/adapters/bidderFactory';
 import AdapterManager from 'src/adaptermanager';
 import { auctionManager } from 'src/auctionManager';
 import * as utils from 'src/utils';
-import { parse as urlParse } from 'src/url';
+import * as urlUtils from 'src/url';
 import events from 'src/events';
 import { YieldbotAdapter, spec } from 'modules/yieldbotBidAdapter';
 
@@ -908,6 +908,18 @@ describe('Yieldbot Adapter Unit Tests', function() {
       const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       expect(request.yieldbotSlotParams.ssz).to.equal('728x90|300x600.300x250|160x600');
     });
+
+    it('should be adapter loaded before navigation start time', function() {
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
+      const timeDiff = request.data.cts_ns - request.data.cts_js;
+      expect(timeDiff >= 0, 'adapter loaded < nav').to.equal(true);
+    });
+
+    it('should be navigation start before bid request time', function() {
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
+      const timeDiff = request.data.cts_ini - request.data.cts_ns;
+      expect(timeDiff >= 0, 'nav start < request').to.equal(true);
+    });
   });
 
   describe('interpretResponse', function() {
@@ -1210,7 +1222,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
           firstAdUnits,
           firstAdUnitCodes,
           (request, done) => {
-            const url = urlParse(
+            const url = urlUtils.parse(
               request.url,
               { noDecodeWholeURL: true }
             );
@@ -1236,7 +1248,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
           secondAdUnits,
           secondAdUnitCodes,
           (request) => {
-            const url = urlParse(
+            const url = urlUtils.parse(
               request.url,
               { noDecodeWholeURL: true }
             );
