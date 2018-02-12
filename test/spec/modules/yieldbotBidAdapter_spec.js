@@ -809,7 +809,6 @@ describe('Yieldbot Adapter Unit Tests', function() {
         YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT,
         '/');
       let requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);
-      console.log(requests);
       expect(requests.length).to.equal(0);
       YieldbotAdapter.deleteCookie(cookieName);
       requests = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS);

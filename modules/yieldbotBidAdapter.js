@@ -744,7 +744,6 @@ export const YieldbotAdapter = {
 
     const cookieStr = `${name}=${dataValue};expires=${expireTime};path=${docLocation};domain=${pageDomain}${httpsOnly}`;
     document.cookie = cookieStr;
-    console.log('cookie.value', value);
   },
 
   deleteCookie: function(name, path, domain, secure) {
