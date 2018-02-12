@@ -317,7 +317,7 @@ export const YieldbotAdapter = {
       searchParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] =
         yieldbotSlotParams[this.CONSTANTS.REQUEST_PARAMS.BID_SLOT_SIZE] || '';
 
-      const bidUrl = this.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX +
+      const bidUrl = this.urlPrefix() +
               yieldbotSlotParams.psn +
               this.CONSTANTS.REQUEST_API_VERSION +
               this.CONSTANTS.REQUEST_API_PATH_BID;
@@ -407,7 +407,7 @@ export const YieldbotAdapter = {
           const bidIdMap = yieldbotSlotParams && yieldbotSlotParams.bidIdMap ? yieldbotSlotParams.bidIdMap : {};
           const requestId = bidIdMap[paramKey] || '';
 
-          const urlPrefix = responseBody.url_prefix || this.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX;
+          const urlPrefix = this.urlPrefix(responseBody.url_prefix);
           const tagObject = this.buildAdCreativeTag(urlPrefix, bid, bidRequest);
           const bidResponse = {
             requestId: requestId,
@@ -744,6 +744,7 @@ export const YieldbotAdapter = {
 
     const cookieStr = `${name}=${dataValue};expires=${expireTime};path=${docLocation};domain=${pageDomain}${httpsOnly}`;
     document.cookie = cookieStr;
+    console.log('cookie.value', value);
   },
 
   deleteCookie: function(name, path, domain, secure) {
@@ -755,9 +756,9 @@ export const YieldbotAdapter = {
    * See [CONSTANTS.COOKIES]{@link module:YieldbotBidAdapter.CONSTANTS}.
    */
   clearAllCookies: function() {
-    for (let cookieName in this.CONSTANTS.COOKIES) {
-      if (this.CONSTANTS.COOKIES.hasOwnProperty(cookieName)) {
-        this.deleteCookie(cookieName);
+    for (let label in this.CONSTANTS.COOKIES) {
+      if (this.CONSTANTS.COOKIES.hasOwnProperty(label)) {
+        this.deleteCookie(this.CONSTANTS.COOKIES[label]);
       }
     }
   },

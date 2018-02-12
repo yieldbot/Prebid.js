@@ -8,6 +8,9 @@ import * as urlUtils from 'src/url';
 import events from 'src/events';
 import { YieldbotAdapter, spec } from 'modules/yieldbotBidAdapter';
 
+before(function() {
+  YieldbotAdapter.clearAllCookies();
+});
 describe('Yieldbot Adapter Unit Tests', function() {
   const ALL_SEARCH_PARAMS = ['apie', 'bt', 'cb', 'cts_ad', 'cts_imp', 'cts_ini', 'cts_js', 'cts_ns', 'cts_rend', 'cts_res', 'e', 'ioa', 'it', 'la', 'lo', 'lpv', 'lpvi', 'mtp', 'np', 'pvd', 'pvi', 'r', 'ri', 'sb', 'sd', 'si', 'slot', 'sn', 'ssz', 'to', 'ua', 'v', 'vi'];
 
@@ -229,6 +232,7 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
   afterEach(function() {
     YieldbotAdapter._optOut = false;
+    YieldbotAdapter.clearAllCookies();
   });
 
   describe('Adapter exposes BidderSpec API', function() {
@@ -470,22 +474,31 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
   describe('clearAllcookies', function() {
     it('should delete all first-party cookies', function() {
-      for (let cookieName in YieldbotAdapter.CONSTANTS.COOKIES) {
-        YieldbotAdapter.setCookie(cookieName, 1, YieldbotAdapter.CONSTANTS.USER_ID_TIMEOUT, '/');
+      let label, cookieName, cookieValue;
+      for (label in YieldbotAdapter.CONSTANTS.COOKIES) {
+        if (YieldbotAdapter.CONSTANTS.COOKIES.hasOwnProperty(label)) {
+          cookieName = YieldbotAdapter.CONSTANTS.COOKIES[label];
+          YieldbotAdapter.setCookie(cookieName, 1, YieldbotAdapter.CONSTANTS.USER_ID_TIMEOUT, '/');
+        }
       };
 
-      let cookieName, cookieValue;
-      for (cookieName in YieldbotAdapter.CONSTANTS.COOKIES) {
-        cookieValue = YieldbotAdapter.getCookie(cookieName);
-        expect(!!cookieValue).to.equal(true);
+      for (label in YieldbotAdapter.CONSTANTS.COOKIES) {
+        if (YieldbotAdapter.CONSTANTS.COOKIES.hasOwnProperty(label)) {
+          cookieName = YieldbotAdapter.CONSTANTS.COOKIES[label];
+          cookieValue = YieldbotAdapter.getCookie(cookieName);
+          expect(!!cookieValue).to.equal(true);
+        }
       };
 
       YieldbotAdapter.clearAllCookies();
 
-      for (cookieName in YieldbotAdapter.CONSTANTS.COOKIES) {
-        cookieValue = YieldbotAdapter.getCookie(cookieName);
-        expect(cookieValue).to.equal(null);
-      }
+      for (label in YieldbotAdapter.CONSTANTS.COOKIES) {
+        if (YieldbotAdapter.CONSTANTS.COOKIES.hasOwnProperty(label)) {
+          cookieName = YieldbotAdapter.CONSTANTS.COOKIES[label];
+          cookieValue = YieldbotAdapter.getCookie(cookieName);
+          expect(cookieValue).to.equal(null);
+        }
+      };
     });
   });
 
@@ -686,15 +699,15 @@ describe('Yieldbot Adapter Unit Tests', function() {
 
   describe('urlPrefix', function() {
     const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.URL_PREFIX;
-
     afterEach(function() {
       YieldbotAdapter.deleteCookie(cookieName);
       expect(YieldbotAdapter.getCookie(cookieName)).to.equal(null);
     });
 
-    it('should set the default prefix if cookie does not exist', function() {
+    it('should set the default prefix if cookie does not exist', function(done) {
       const urlPrefix = YieldbotAdapter.urlPrefix();
       expect(urlPrefix).to.equal(YieldbotAdapter.CONSTANTS.DEFAULT_REQUEST_URL_PREFIX);
+      done();
     });
 
     it('should return prefix if cookie exists', function() {
@@ -909,6 +922,18 @@ describe('Yieldbot Adapter Unit Tests', function() {
       expect(request.yieldbotSlotParams.ssz).to.equal('728x90|300x600.300x250|160x600');
     });
 
+    it('should use edge server Url prefix if set', function() {
+      const cookieName = YieldbotAdapter.CONSTANTS.COOKIES.URL_PREFIX;
+      YieldbotAdapter.setCookie(
+        cookieName,
+        'http://close.edge.adserver.com/',
+        YieldbotAdapter.CONSTANTS.SESSION_ID_TIMEOUT,
+        '/');
+
+      const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
+      expect(request.url).to.match(/^http:\/\/close\.edge\.adserver\.com\//);
+    });
+
     it('should be adapter loaded before navigation start time', function() {
       const request = YieldbotAdapter.buildRequests(FIXTURE_BID_REQUESTS)[0];
       const timeDiff = request.data.cts_ns - request.data.cts_js;
@@ -990,6 +1015,17 @@ describe('Yieldbot Adapter Unit Tests', function() {
         FIXTURE_BID_REQUEST
       );
       expect(responses[1].currency).to.equal('USD');
+    });
+
+    it('should set edge server Url prefix', function() {
+      FIXTURE_SERVER_RESPONSE.body.url_prefix = 'http://close.edge.adserver.com/';
+      const responses = YieldbotAdapter.interpretResponse(
+        FIXTURE_SERVER_RESPONSE,
+        FIXTURE_BID_REQUEST
+      );
+      const edgeServerUrlPrefix = YieldbotAdapter.getCookie(YieldbotAdapter.CONSTANTS.COOKIES.URL_PREFIX);
+      expect(edgeServerUrlPrefix).to.match(/^http:\/\/close\.edge\.adserver\.com\//);
+      expect(responses[0].ad).to.match(/http:\/\/close\.edge\.adserver\.com\//);
     });
   });
 
