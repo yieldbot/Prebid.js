@@ -203,6 +203,12 @@ export const YieldbotAdapter = {
       searchParams['sn'] = yieldbotSlotParams['sn'] || '';
       searchParams['ssz'] = yieldbotSlotParams['ssz'] || '';
 
+      for (let k in yieldbotSlotParams) {
+        if (k.indexOf('ybot_') === 0) {
+          searchParams[k] = yieldbotSlotParams[k];
+        }
+      }
+
       const bidUrl = this.urlPrefix() + yieldbotSlotParams.psn + '/v1/init';
 
       searchParams['cts_ini'] = Date.now();
@@ -491,8 +497,11 @@ export const YieldbotAdapter = {
     pageviewId = pageviewId || '';
     try {
       const slotBids = {};
+      const ybotParams = {};
       bidRequests.forEach((bid) => {
         params.psn = params.psn || bid.params.psn || '';
+        const ybp = this.getYbotParams(bid.params);
+        Object.assign(ybotParams, ybp);
         utils.parseSizesInput(bid.sizes).forEach(sz => {
           const slotName = bid.params.slot;
           if (sz && (!slotBids[slotName] || !slotBids[slotName].some(existingSize => existingSize === sz))) {
@@ -515,11 +524,21 @@ export const YieldbotAdapter = {
       params['sn'] = nm.join('|');
       params['ssz'] = sz.join('|');
 
+      Object.assign(params, ybotParams);
       params.bidIdMap = bidIdMap;
     } catch (err) {}
     return params;
   },
 
+  getYbotParams: function(params) {
+    const ybp = {};
+    for (let k in params) {
+      if (k.indexOf('ybot_') === 0) {
+        ybp[k] = params[k];
+      }
+    }
+    return ybp;
+  },
   getCookie: function(name) {
     const cookies = document.cookie.split(';');
     let value = null;
