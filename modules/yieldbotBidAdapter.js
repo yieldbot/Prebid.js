@@ -209,7 +209,8 @@ export const YieldbotAdapter = {
         }
       }
 
-      const bidUrl = this.urlPrefix() + yieldbotSlotParams.psn + '/v1/init';
+      const url_prefix = searchParams['ybot_prefix'] || '';
+      const bidUrl = this.urlPrefix(url_prefix) + yieldbotSlotParams.psn + '/v1/init';
 
       searchParams['cts_ini'] = Date.now();
       requests.push({
